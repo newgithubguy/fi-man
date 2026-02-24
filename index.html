@@ -199,6 +199,31 @@
     </section>
   </div>
 
+  <div id="exportDateRangeModal" class="modal-backdrop" hidden aria-hidden="true">
+    <section class="modal-card" role="dialog" aria-modal="true" aria-labelledby="exportDateRangeTitle">
+      <h3 id="exportDateRangeTitle">Export Transactions - Select Date Range</h3>
+      <form id="exportDateRangeForm" class="export-form">
+        <label>
+          From Date
+          <input id="exportFromDate" type="date" />
+          <span class="field-hint">Leave empty for earliest date</span>
+        </label>
+        <label>
+          To Date
+          <input id="exportToDate" type="date" />
+          <span class="field-hint">Leave empty for latest date</span>
+        </label>
+        <p class="export-info">
+          <strong id="exportTransactionCount">All</strong> transactions will be exported.
+        </p>
+        <div class="modal-actions">
+          <button id="exportCancel" type="button">Cancel</button>
+          <button type="submit">Export CSV</button>
+        </div>
+      </form>
+    </section>
+  </div>
+
   <script src="app.js"></script>
 </body>
 </html>

@@ -45,6 +45,12 @@ const editAmountInput = document.getElementById("editAmountInput");
 const editRecurrenceInput = document.getElementById("editRecurrenceInput");
 const editNotesInput = document.getElementById("editNotesInput");
 const editCancel = document.getElementById("editCancel");
+const exportDateRangeModal = document.getElementById("exportDateRangeModal");
+const exportDateRangeForm = document.getElementById("exportDateRangeForm");
+const exportFromDate = document.getElementById("exportFromDate");
+const exportToDate = document.getElementById("exportToDate");
+const exportTransactionCount = document.getElementById("exportTransactionCount");
+const exportCancel = document.getElementById("exportCancel");
 
 let transactions = loadTransactions();
 let currentMonth = new Date();
@@ -153,16 +159,102 @@ document.getElementById("clearAll").addEventListener("click", async () => {
 });
 
 exportCsvButton.addEventListener("click", () => {
-  const csv = toCsv(transactions);
+  // Reset modal fields
+  exportFromDate.value = "";
+  exportToDate.value = "";
+  updateExportTransactionCount();
+  
+  // Show modal
+  exportDateRangeModal.removeAttribute("hidden");
+});
+
+exportCancel.addEventListener("click", () => {
+  exportDateRangeModal.setAttribute("hidden", "");
+});
+
+exportDateRangeForm.addEventListener("submit", (event) => {
+  event.preventDefault();
+  
+  // Get date range values
+  const fromDate = exportFromDate.value ? new Date(exportFromDate.value) : null;
+  const toDate = exportToDate.value ? new Date(exportToDate.value) : null;
+  
+  // Filter transactions by date range
+  let filteredTransactions = transactions;
+  if (fromDate) {
+    filteredTransactions = filteredTransactions.filter(t => new Date(t.date) >= fromDate);
+  }
+  if (toDate) {
+    // Set to end of day to include the full date
+    const toDateEndOfDay = new Date(toDate);
+    toDateEndOfDay.setHours(23, 59, 59, 999);
+    filteredTransactions = filteredTransactions.filter(t => new Date(t.date) <= toDateEndOfDay);
+  }
+  
+  // Generate and download CSV
+  const csv = toCsv(filteredTransactions);
   const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
   const url = URL.createObjectURL(blob);
   const anchor = document.createElement("a");
+  
+  // Create filename with date range
+  let filename = "finance-transactions";
+  if (exportFromDate.value) {
+    filename += `-from-${exportFromDate.value}`;
+  }
+  if (exportToDate.value) {
+    filename += `-to-${exportToDate.value}`;
+  }
   const stamp = new Date().toISOString().slice(0, 10);
+  filename += `-export-${stamp}.csv`;
+  
   anchor.href = url;
-  anchor.download = `finance-transactions-${stamp}.csv`;
+  anchor.download = filename;
   anchor.click();
   URL.revokeObjectURL(url);
+  
+  // Close modal
+  exportDateRangeModal.setAttribute("hidden", "");
 });
+
+// Update transaction count when date range changes
+exportFromDate.addEventListener("change", updateExportTransactionCount);
+exportToDate.addEventListener("change", updateExportTransactionCount);
+
+// Close modal on backdrop click
+exportDateRangeModal.addEventListener("click", (event) => {
+  if (event.target === exportDateRangeModal) {
+    exportDateRangeModal.setAttribute("hidden", "");
+  }
+});
+
+// Close modal on Escape key
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape" && !exportDateRangeModal.hasAttribute("hidden")) {
+    exportDateRangeModal.setAttribute("hidden", "");
+  }
+});
+
+function updateExportTransactionCount() {
+  const fromDate = exportFromDate.value ? new Date(exportFromDate.value) : null;
+  const toDate = exportToDate.value ? new Date(exportToDate.value) : null;
+  
+  let count = transactions.length;
+  if (fromDate || toDate) {
+    count = transactions.filter(t => {
+      const tDate = new Date(t.date);
+      if (fromDate && tDate < fromDate) return false;
+      if (toDate) {
+        const toDateEndOfDay = new Date(toDate);
+        toDateEndOfDay.setHours(23, 59, 59, 999);
+        if (tDate > toDateEndOfDay) return false;
+      }
+      return true;
+    }).length;
+  }
+  
+  exportTransactionCount.textContent = count === transactions.length ? "All" : count;
+}
 
 importCsvInput.addEventListener("change", async (event) => {
   const file = event.target.files?.[0];
