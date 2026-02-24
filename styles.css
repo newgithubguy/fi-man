@@ -295,7 +295,7 @@ body {
   border-radius: 8px;
   padding: 10px;
   display: grid;
-  grid-template-columns: 100px 90px 90px 1fr 1fr 100px auto auto;
+  grid-template-columns: 90px 120px 100px 1fr 1fr 100px auto auto;
   gap: 8px;
   align-items: center;
 }
@@ -303,6 +303,10 @@ body {
 .vendor {
   color: var(--muted);
   font-size: 0.9rem;
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .recurrence {
