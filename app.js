@@ -11,7 +11,7 @@ const dateInput = document.getElementById("dateInput");
 const dateHint = document.getElementById("dateHint");
 const descriptionInput = document.getElementById("descriptionInput");
 const descriptionHint = document.getElementById("descriptionHint");
-const vendorInput = document.getElementById("vendorInput");
+const payeeInput = document.getElementById("payeeInput");
 const notesInput = document.getElementById("notesInput");
 const amountInput = document.getElementById("amountInput");
 const amountHint = document.getElementById("amountHint");
@@ -39,7 +39,7 @@ const clearAllConfirm = document.getElementById("clearAllConfirm");
 const editTransactionModal = document.getElementById("editTransactionModal");
 const editTransactionForm = document.getElementById("editTransactionForm");
 const editDateInput = document.getElementById("editDateInput");
-const editVendorInput = document.getElementById("editVendorInput");
+const editPayeeInput = document.getElementById("editPayeeInput");
 const editDescriptionInput = document.getElementById("editDescriptionInput");
 const editAmountInput = document.getElementById("editAmountInput");
 const editRecurrenceInput = document.getElementById("editRecurrenceInput");
@@ -216,7 +216,7 @@ transactionForm.addEventListener("submit", (event) => {
 
   const date = dateInput.value;
   const description = descriptionInput.value.trim();
-  const vendor = vendorInput.value.trim();
+  const payee = payeeInput.value.trim();
   const notes = notesInput.value.trim();
   const amount = Number(amountInput.value);
   const recurrence = recurrenceInput.value;
@@ -234,7 +234,7 @@ transactionForm.addEventListener("submit", (event) => {
       id: crypto.randomUUID(),
       date,
       description,
-      vendor,
+      payee,
       notes,
       amount,
       recurrence,
@@ -264,7 +264,7 @@ function loadTransactions() {
       .map((entry) => ({
         id: entry.id || crypto.randomUUID(),
         date: entry.date,
-        vendor: entry.vendor || '',
+        payee: entry.payee || entry.vendor || '',
         description: entry.description,
         notes: entry.notes || '',
         amount: Number(entry.amount),
@@ -287,14 +287,14 @@ function commitTransactions(nextTransactions) {
 }
 
 function toCsv(rows) {
-  const header = ["date", "vendor", "description", "notes", "amount", "recurrence"];
+  const header = ["date", "payee", "description", "notes", "amount", "recurrence"];
   const lines = [header.join(",")];
   for (const row of rows) {
-    const escapedVendor = (row.vendor || "").replace(/"/g, '""');
+    const escapedPayee = (row.payee || "").replace(/"/g, '""');
     const escapedDescription = row.description.replace(/"/g, '""');
     const escapedNotes = (row.notes || "").replace(/"/g, '""');
     const recurrence = row.recurrence || "one-time";
-    lines.push(`${row.date},"${escapedVendor}","${escapedDescription}","${escapedNotes}",${row.amount},${recurrence}`);
+    lines.push(`${row.date},"${escapedPayee}","${escapedDescription}","${escapedNotes}",${row.amount},${recurrence}`);
   }
   return `${lines.join("\n")}\n`;
 }
@@ -321,11 +321,11 @@ function parseCsv(content) {
   const hasHeader = /^date\s*,/i.test(lines[0]);
   const headerLine = hasHeader ? lines[0].toLowerCase() : "";
   
-  // Determine column order: check if vendor comes before description
-  const vendorBeforeDesc = headerLine.indexOf("vendor") > 0 && 
-                           headerLine.indexOf("vendor") < headerLine.indexOf("description");
+  // Determine column order: check if payee/vendor comes before description
+  const payeeBeforeDesc = (headerLine.indexOf("payee") > 0 && headerLine.indexOf("payee") < headerLine.indexOf("description")) ||
+                          (headerLine.indexOf("vendor") > 0 && headerLine.indexOf("vendor") < headerLine.indexOf("description"));
   const hasNotesColumn = /notes/i.test(headerLine);
-  const hasVendorColumn = /vendor/i.test(headerLine);
+  const hasPayeeColumn = /payee|vendor/i.test(headerLine);
   
   const startIndex = hasHeader ? 1 : 0;
   const totalRows = Math.max(lines.length - startIndex, 0);
@@ -337,29 +337,29 @@ function parseCsv(content) {
       continue;
     }
 
-    let date, description, vendor, notes, amount, recurrence;
+    let date, description, payee, notes, amount, recurrence;
     
-    if (vendorBeforeDesc && hasNotesColumn) {
-      // New format: date, vendor, description, notes, amount, recurrence
+    if (payeeBeforeDesc && hasNotesColumn) {
+      // New format: date, payee, description, notes, amount, recurrence
       date = values[0].trim();
-      vendor = values.length > 1 ? values[1].trim() : "";
+      payee = values.length > 1 ? values[1].trim() : "";
       description = values.length > 2 ? values[2].trim() : "";
       notes = values.length > 3 ? values[3].trim() : "";
       amount = Number(values.length > 4 ? values[4] : 0);
       recurrence = values.length > 5 ? values[5].trim() : "one-time";
-    } else if (hasNotesColumn && !vendorBeforeDesc) {
-      // Format: date, description, vendor, notes, amount, recurrence
+    } else if (hasNotesColumn && !payeeBeforeDesc) {
+      // Format: date, description, payee, notes, amount, recurrence
       date = values[0].trim();
       description = values[1].trim();
-      vendor = values.length > 2 ? values[2].trim() : "";
+      payee = values.length > 2 ? values[2].trim() : "";
       notes = values.length > 3 ? values[3].trim() : "";
       amount = Number(values.length > 4 ? values[4] : 0);
       recurrence = values.length > 5 ? values[5].trim() : "one-time";
-    } else if (hasVendorColumn && !vendorBeforeDesc) {
-      // Previous format: date, description, vendor, amount, recurrence
+    } else if (hasPayeeColumn && !payeeBeforeDesc) {
+      // Previous format: date, description, payee, amount, recurrence
       date = values[0].trim();
       description = values[1].trim();
-      vendor = values.length > 2 ? values[2].trim() : "";
+      payee = values.length > 2 ? values[2].trim() : "";
       notes = "";
       amount = Number(values.length > 3 ? values[3] : 0);
       recurrence = values.length > 4 ? values[4].trim() : "one-time";
@@ -367,7 +367,7 @@ function parseCsv(content) {
       // Old format: date, description, amount, recurrence (or just date, description, amount)
       date = values[0].trim();
       description = values[1].trim();
-      vendor = "";
+      payee = "";
       notes = "";
       amount = Number(values[2]);
       recurrence = values.length > 3 ? values[3].trim() : "one-time";
@@ -382,7 +382,7 @@ function parseCsv(content) {
       id: crypto.randomUUID(),
       date,
       description,
-      vendor,
+      payee,
       notes,
       amount,
       recurrence: recurrence || "one-time",
@@ -865,9 +865,9 @@ function renderTransactions() {
     const date = document.createElement("span");
     date.textContent = item.date;
 
-    const vendor = document.createElement("span");
-    vendor.textContent = item.vendor || "—";
-    vendor.className = "vendor";
+    const payee = document.createElement("span");
+    payee.textContent = item.payee || "—";
+    payee.className = "payee";
 
     const recurrence = document.createElement("span");
     recurrence.textContent = item.recurrence && item.recurrence !== 'one-time' ? item.recurrence : "—";
@@ -905,7 +905,7 @@ function renderTransactions() {
       commitTransactions(remainingTransactions);
     });
 
-    row.append(date, vendor, recurrence, description, notes, amount, editButton, removeButton);
+    row.append(date, payee, recurrence, description, notes, amount, editButton, removeButton);
     transactionList.appendChild(row);
   }
 }
@@ -1023,7 +1023,7 @@ function openEditTransactionModal(transactionId) {
   
   // Populate form fields
   editDateInput.value = txn.date;
-  editVendorInput.value = txn.vendor || '';
+  editPayeeInput.value = txn.payee || '';
   editDescriptionInput.value = txn.description || '';
   editAmountInput.value = txn.amount;
   editRecurrenceInput.value = txn.recurrence || 'one-time';
@@ -1052,7 +1052,7 @@ editTransactionForm.addEventListener("submit", (event) => {
   
   // Update transaction properties
   txn.date = editDateInput.value;
-  txn.vendor = editVendorInput.value.trim();
+  txn.payee = editPayeeInput.value.trim();
   txn.description = editDescriptionInput.value.trim();
   txn.amount = Number(editAmountInput.value);
   txn.recurrence = editRecurrenceInput.value;

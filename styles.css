@@ -300,7 +300,7 @@ body {
   align-items: center;
 }
 
-.vendor {
+.payee {
   color: var(--muted);
   font-size: 0.9rem;
   font-weight: 500;

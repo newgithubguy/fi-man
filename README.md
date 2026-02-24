@@ -15,10 +15,10 @@ Open `index.html` in your browser.
 
 ## Use
 
-1. Add transactions using date, vendor, description, notes, amount, and recurrence.
+1. Add transactions using date, payee, description, notes, amount, and recurrence.
    - Positive amount = income
    - Negative amount = expense
-   - Vendor is optional (e.g., Walmart, Employer, Landlord)
+   - Payee is optional (e.g., Walmart, Employer, Landlord)
    - Notes is optional for additional memo or details
    - Click a calendar day to prefill the transaction date quickly.
    - Select recurrence frequency: one-time, daily, weekly, bi-weekly, monthly, quarterly, or yearly.
@@ -36,8 +36,8 @@ Open `index.html` in your browser.
 7. Choose import mode:
    - **Merge Import** adds imported rows to existing data.
    - **Replace Import** overwrites existing data with imported rows.
-8. Import transactions with **Import CSV** (columns: date, vendor, description, notes, amount, recurrence).
-   - Vendor, Notes, and Recurrence columns are optional.
+8. Import transactions with **Import CSV** (columns: date, payee, description, notes, amount, recurrence).
+   - Payee, Notes, and Recurrence columns are optional.
    - Recurrence defaults to "one-time" if not provided.
    - Duplicate rows are skipped automatically.
    - An in-page preview dialog appears before applying import (valid, duplicate, invalid counts) with Confirm/Cancel.
