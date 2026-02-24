@@ -276,16 +276,46 @@ Since the app uses browser localStorage, here's how to backup:
 
 When you update the fi-man repository:
 
+### Using Portainer UI (Recommended)
+
 1. **Go to Stacks** → `finance-calendar`
 
-2. **Click Re-pull and redeploy**:
-   - Check **Pull latest image**
-   - Click **Update the stack**
+2. **Click the "Git" tab** or **"Editor" tab**:
+   - If using Git integration, click **"Pull and redeploy"**
+   - The latest code will be pulled from GitHub
+   - New container will be deployed with updated code
 
-3. Portainer will:
-   - Remove the old container
-   - Pull the latest image
-   - Deploy a new container with your settings
+3. **Or manually update**:
+   - Delete the `finance-calendar` stack
+   - Redeploy using the latest docker-compose.yml from the repository
+
+### Using Command Line
+
+If you're managing it via command line on the Portainer server:
+
+```bash
+cd /path/to/fi-man
+
+# Pull latest code
+git pull origin master
+
+# Rebuild without cache to ensure all files are updated
+docker compose down
+docker compose build --no-cache
+docker compose up -d
+
+# Wait for deployment and check logs
+docker compose logs
+```
+
+**Important**: The `--no-cache` flag is essential when updating to ensure:
+- New application code is picked up
+- CSS and JavaScript changes are applied
+- No old cached modules are used
+
+**Clear browser cache after updating**:
+- Do a hard refresh: `Ctrl + Shift + R` (Windows/Linux) or `Cmd + Shift + R` (Mac)
+- Or clear your browser's cache for that site
 
 ## Troubleshooting
 

@@ -1,6 +1,8 @@
 # Finance Calendar
 
 Simple browser-based finance tracker with:
+- **Multi-account support** - Create separate calendars for different accounts
+- **Linked transfers** - Transfer money between accounts (creates matching transactions)
 - Calendar view
 - Daily totals
 - Balance by day
@@ -38,6 +40,13 @@ python -m http.server 8000
 
 ## Use
 
+### Accounts
+- Click the **+** button in the left sidebar to create new accounts
+- Click an account name to switch between them
+- Each account has its own separate transaction history
+- Hover over an account and click **×** to delete it (only if you have multiple accounts)
+
+### Transactions
 1. Add transactions using date, payee, description, notes, amount, and recurrence.
    - Positive amount = income
    - Negative amount = expense
@@ -47,19 +56,28 @@ python -m http.server 8000
    - Select recurrence frequency: one-time, daily, weekly, bi-weekly, monthly, quarterly, or yearly.
    - Recurring transactions automatically appear on future dates based on the selected frequency.
    - Date, Description, and Amount show inline validation hints when required values are missing (Amount also blocks zero).
-2. Move between months with arrow buttons.
-3. Review daily and balance totals directly in the calendar.
-4. Click on a day to view all transactions for that specific date (including recurring instances).
-5. Click "📊 View Graph" to see income vs expenses over time.
+
+2. **Transfers Between Accounts**:
+   - Check "Transfer to another account" when adding a transaction
+   - Select which account to transfer to
+   - A matching transaction with the opposite amount will automatically be created in the other account
+   - Both transactions are linked - editing one updates the other
+   - Deleting one transaction removes both linked transactions
+   - Transfer links are shown as a badge on the transaction
+
+3. Move between months with arrow buttons.
+4. Review daily and balance totals directly in the calendar.
+5. Click on a day to view all transactions for that specific date (including recurring instances).
+6. Click "📊 View Graph" to see income vs expenses over time.
    - Green line shows income trends
    - Red line shows expense trends
    - Adjust time range (30, 60, 90, 180, or 365 days)
    - View summary statistics for the selected period
-6. Export transactions with **Export CSV**.
-7. Choose import mode:
+7. Export transactions with **Export CSV**.
+8. Choose import mode:
    - **Merge Import** adds imported rows to existing data.
    - **Replace Import** overwrites existing data with imported rows.
-8. Import transactions with **Import CSV** (columns: date, payee, description, notes, amount, recurrence).
+9. Import transactions with **Import CSV** (columns: date, payee, description, notes, amount, recurrence).
    - Payee, Notes, and Recurrence columns are optional.
    - Recurrence defaults to "one-time" if not provided.
    - Duplicate rows are skipped automatically.

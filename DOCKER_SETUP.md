@@ -222,10 +222,17 @@ To update to the latest version:
 cd /path/to/fi-man
 git pull origin master
 
-# Rebuild and restart
+# Rebuild without cache to get all file updates
 docker-compose down
+docker-compose build --no-cache
 docker-compose up -d
 ```
+
+**Important**: Use `--no-cache` to ensure all application files are rebuilt from scratch. This is especially important when updating features or fixing bugs.
+
+After updating, do a **hard refresh** in your browser to clear any cached files:
+- Windows/Linux: `Ctrl + Shift + R` or `Ctrl + F5`
+- Mac: `Cmd + Shift + R`
 
 ## Uninstalling
 
