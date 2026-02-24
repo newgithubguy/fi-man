@@ -101,25 +101,31 @@ document.getElementById("nextMonth").addEventListener("click", () => {
   render();
 });
 
-addAccountBtn.addEventListener("click", addAccount);
+if (addAccountBtn) {
+  addAccountBtn.addEventListener("click", addAccount);
+}
 
-isTransferInput.addEventListener("change", () => {
-  if (isTransferInput.checked) {
-    updateTransferAccountOptions(transferAccountInput, transferAccountLabel);
-    transferAccountLabel.classList.remove("hidden");
-  } else {
-    transferAccountLabel.classList.add("hidden");
-  }
-});
+if (isTransferInput) {
+  isTransferInput.addEventListener("change", () => {
+    if (isTransferInput.checked) {
+      updateTransferAccountOptions(transferAccountInput, transferAccountLabel);
+      transferAccountLabel.classList.remove("hidden");
+    } else {
+      transferAccountLabel.classList.add("hidden");
+    }
+  });
+}
 
-editIsTransferInput.addEventListener("change", () => {
-  if (editIsTransferInput.checked) {
-    updateTransferAccountOptions(editTransferAccountInput, editTransferAccountLabel);
-    editTransferAccountLabel.classList.remove("hidden");
-  } else {
-    editTransferAccountLabel.classList.add("hidden");
-  }
-});
+if (editIsTransferInput) {
+  editIsTransferInput.addEventListener("change", () => {
+    if (editIsTransferInput.checked) {
+      updateTransferAccountOptions(editTransferAccountInput, editTransferAccountLabel);
+      editTransferAccountLabel.classList.remove("hidden");
+    } else {
+      editTransferAccountLabel.classList.add("hidden");
+    }
+  });
+}
 
 document.getElementById("yearSelect").addEventListener("change", () => {
   const year = parseInt(yearSelect.value);
@@ -1174,6 +1180,8 @@ function render() {
 }
 
 function renderAccounts() {
+  if (!accountsList) return;
+  
   accountsList.innerHTML = '';
   
   accounts.forEach(account => {
@@ -1267,6 +1275,8 @@ function deleteAccount(accountId) {
 }
 
 function updateTransferAccountOptions(selectElement, labelElement) {
+  if (!selectElement) return;
+  
   selectElement.innerHTML = '';
   
   accounts.forEach(account => {
@@ -1561,8 +1571,8 @@ function focusEntryFieldAfterDatePick() {
 }
 
 (function initialize() {
-  dateInput.value = selectedDateKey;
-  updateTransferAccountOptions(transferAccountInput, transferAccountLabel);
-  updateTransferAccountOptions(editTransferAccountInput, editTransferAccountLabel);
+  if (dateInput) dateInput.value = selectedDateKey;
+  if (transferAccountInput) updateTransferAccountOptions(transferAccountInput, transferAccountLabel);
+  if (editTransferAccountInput) updateTransferAccountOptions(editTransferAccountInput, editTransferAccountLabel);
   render();
 })();
