@@ -52,6 +52,16 @@ currentMonth.setDate(1);
 let selectedDateKey = toDateKey(new Date());
 let editingTransactionId = null;
 
+document.getElementById("prevMonth").addEventListener("click", () => {
+  currentMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1);
+  render();
+});
+
+document.getElementById("nextMonth").addEventListener("click", () => {
+  currentMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1);
+  render();
+});
+
 document.getElementById("yearSelect").addEventListener("change", () => {
   const year = parseInt(yearSelect.value);
   const month = currentMonth.getMonth();

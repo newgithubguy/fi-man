@@ -15,12 +15,13 @@
 
     <section class="controls card">
       <div class="month-controls">
-        <label>
-          Year
+        <button id="prevMonth" type="button" class="month-nav-btn" aria-label="Previous month">←</button>
+        <div class="month-selector-group">
+          <label for="yearSelect" class="selector-label">Year</label>
           <select id="yearSelect"></select>
-        </label>
-        <label>
-          Month
+        </div>
+        <div class="month-selector-group">
+          <label for="monthSelect" class="selector-label">Month</label>
           <select id="monthSelect">
             <option value="0">January</option>
             <option value="1">February</option>
@@ -35,7 +36,8 @@
             <option value="10">November</option>
             <option value="11">December</option>
           </select>
-        </label>
+        </div>
+        <button id="nextMonth" type="button" class="month-nav-btn" aria-label="Next month">→</button>
         <a href="graph.html" class="graph-link">📊 View Graph</a>
       </div>
 
