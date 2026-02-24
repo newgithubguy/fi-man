@@ -16,21 +16,7 @@ Simple browser-based finance tracker with:
 ### Option 1: Direct Browser (Simplest)
 Open `index.html` in your browser.
 
-### Option 2: Docker Container (Local Network)
-To run on your local network, use Docker:
-
-```bash
-# Quick start with Docker Compose
-docker-compose up -d
-```
-
-Access at: `http://localhost:8080` or `http://YOUR_MACHINE_IP:8080`
-
-For detailed Docker setup instructions, see [DOCKER_SETUP.md](DOCKER_SETUP.md).
-
-**Prefer a UI?** Use [Portainer](PORTAINER_SETUP.md) for easy container management without command line.
-
-### Option 3: Local HTTP Server
+### Option 2: Local HTTP Server
 ```bash
 # Python
 python -m http.server 8000
