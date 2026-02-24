@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Income vs Expenses - Finance Calendar</title>
+  <link rel="stylesheet" href="styles.css" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+  <main class="app">
+    <header class="topbar">
+      <h1>Income vs Expenses</h1>
+      <p class="subtitle">Track your financial trends over time</p>
+    </header>
+
+    <section class="controls card">
+      <div class="graph-controls">
+        <a href="index.html" class="back-link">← Back to Calendar</a>
+        <div class="view-mode-controls">
+          <label>
+            <input type="radio" name="viewMode" value="timeRange" checked />
+            Time Range
+          </label>
+          <label>
+            <input type="radio" name="viewMode" value="month" />
+            Specific Month
+          </label>
+        </div>
+        <div class="time-range-controls" id="timeRangeControls">
+          <label>
+            Range
+            <select id="timeRange">
+              <option value="30">Last 30 Days</option>
+              <option value="60">Last 60 Days</option>
+              <option value="90" selected>Last 90 Days</option>
+              <option value="180">Last 6 Months</option>
+              <option value="365">Last Year</option>
+            </select>
+          </label>
+        </div>
+        <div class="month-selector-controls" id="monthSelectorControls" style="display: none;">
+          <label>
+            Year
+            <select id="yearSelect"></select>
+          </label>
+          <label>
+            Month
+            <select id="monthSelect">
+              <option value="0">January</option>
+              <option value="1">February</option>
+              <option value="2">March</option>
+              <option value="3">April</option>
+              <option value="4">May</option>
+              <option value="5">June</option>
+              <option value="6">July</option>
+              <option value="7">August</option>
+              <option value="8">September</option>
+              <option value="9">October</option>
+              <option value="10">November</option>
+              <option value="11">December</option>
+            </select>
+          </label>
+        </div>
+      </div>
+    </section>
+
+    <section class="card chart-container">
+      <canvas id="incomeExpensesChart"></canvas>
+    </section>
+
+    <section class="card">
+      <h3>Summary</h3>
+      <div class="summary-row">
+        <div class="stat">
+          <span class="label">Total Income</span>
+          <strong id="totalIncome" class="positive">$0.00</strong>
+        </div>
+        <div class="stat">
+          <span class="label">Total Expenses</span>
+          <strong id="totalExpenses" class="negative">$0.00</strong>
+        </div>
+        <div class="stat">
+          <span class="label">Net</span>
+          <strong id="netAmount">$0.00</strong>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script src="graph.js"></script>
+</body>
+</html>

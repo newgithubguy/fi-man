@@ -259,14 +259,14 @@ function commitTransactions(nextTransactions) {
 }
 
 function toCsv(rows) {
-  const header = ["date", "description", "vendor", "notes", "amount", "recurrence"];
+  const header = ["date", "vendor", "description", "notes", "amount", "recurrence"];
   const lines = [header.join(",")];
   for (const row of rows) {
-    const escapedDescription = row.description.replace(/"/g, '""');
     const escapedVendor = (row.vendor || "").replace(/"/g, '""');
+    const escapedDescription = row.description.replace(/"/g, '""');
     const escapedNotes = (row.notes || "").replace(/"/g, '""');
     const recurrence = row.recurrence || "one-time";
-    lines.push(`${row.date},"${escapedDescription}","${escapedVendor}","${escapedNotes}",${row.amount},${recurrence}`);
+    lines.push(`${row.date},"${escapedVendor}","${escapedDescription}","${escapedNotes}",${row.amount},${recurrence}`);
   }
   return `${lines.join("\n")}\n`;
 }
@@ -290,9 +290,15 @@ function parseCsv(content) {
   let invalidRows = 0;
   
   // Check if first line is a header and detect format
-  const hasHeader = /^date\s*,\s*description/i.test(lines[0]);
-  const hasNotesColumn = hasHeader && /notes/i.test(lines[0]);
-  const hasVendorColumn = hasHeader && /vendor/i.test(lines[0]);
+  const hasHeader = /^date\s*,/i.test(lines[0]);
+  const headerLine = hasHeader ? lines[0].toLowerCase() : "";
+  
+  // Determine column order: check if vendor comes before description
+  const vendorBeforeDesc = headerLine.indexOf("vendor") > 0 && 
+                           headerLine.indexOf("vendor") < headerLine.indexOf("description");
+  const hasNotesColumn = /notes/i.test(headerLine);
+  const hasVendorColumn = /vendor/i.test(headerLine);
+  
   const startIndex = hasHeader ? 1 : 0;
   const totalRows = Math.max(lines.length - startIndex, 0);
 
@@ -305,15 +311,23 @@ function parseCsv(content) {
 
     let date, description, vendor, notes, amount, recurrence;
     
-    if (hasNotesColumn) {
-      // Latest format: date, description, vendor, notes, amount, recurrence
+    if (vendorBeforeDesc && hasNotesColumn) {
+      // New format: date, vendor, description, notes, amount, recurrence
+      date = values[0].trim();
+      vendor = values.length > 1 ? values[1].trim() : "";
+      description = values.length > 2 ? values[2].trim() : "";
+      notes = values.length > 3 ? values[3].trim() : "";
+      amount = Number(values.length > 4 ? values[4] : 0);
+      recurrence = values.length > 5 ? values[5].trim() : "one-time";
+    } else if (hasNotesColumn && !vendorBeforeDesc) {
+      // Format: date, description, vendor, notes, amount, recurrence
       date = values[0].trim();
       description = values[1].trim();
       vendor = values.length > 2 ? values[2].trim() : "";
       notes = values.length > 3 ? values[3].trim() : "";
       amount = Number(values.length > 4 ? values[4] : 0);
       recurrence = values.length > 5 ? values[5].trim() : "one-time";
-    } else if (hasVendorColumn) {
+    } else if (hasVendorColumn && !vendorBeforeDesc) {
       // Previous format: date, description, vendor, amount, recurrence
       date = values[0].trim();
       description = values[1].trim();
@@ -823,12 +837,12 @@ function renderTransactions() {
     const date = document.createElement("span");
     date.textContent = item.date;
 
-    const description = document.createElement("span");
-    description.textContent = item.description + (item.isRecurring ? " (recurring)" : "");
-
     const vendor = document.createElement("span");
     vendor.textContent = item.vendor || "—";
     vendor.className = "vendor";
+
+    const description = document.createElement("span");
+    description.textContent = item.description + (item.isRecurring ? " (recurring)" : "");
 
     const notes = document.createElement("span");
     notes.textContent = item.notes || "—";
@@ -849,7 +863,7 @@ function renderTransactions() {
       commitTransactions(remainingTransactions);
     });
 
-    row.append(date, description, vendor, notes, amount, removeButton);
+    row.append(date, vendor, description, notes, amount, removeButton);
     transactionList.appendChild(row);
   }
 }

@@ -18,6 +18,7 @@
         <button id="prevMonth" type="button" aria-label="Previous month">←</button>
         <h2 id="monthLabel"></h2>
         <button id="nextMonth" type="button" aria-label="Next month">→</button>
+        <a href="graph.html" class="graph-link">📊 View Graph</a>
       </div>
 
       <div class="summary-row">
@@ -52,14 +53,14 @@
           <span id="dateHint" class="field-hint" aria-live="polite"></span>
         </label>
         <label>
-          Description
-          <input id="descriptionInput" type="text" maxlength="80" placeholder="Groceries, Salary, Rent..." required />
-          <span id="descriptionHint" class="field-hint" aria-live="polite"></span>
-        </label>
-        <label>
           Vendor
           <input id="vendorInput" type="text" maxlength="60" placeholder="Walmart, Employer, Landlord..." />
           <span class="field-hint"></span>
+        </label>
+        <label>
+          Description
+          <input id="descriptionInput" type="text" maxlength="80" placeholder="Groceries, Salary, Rent..." required />
+          <span id="descriptionHint" class="field-hint" aria-live="polite"></span>
         </label>
         <label>
           Amount

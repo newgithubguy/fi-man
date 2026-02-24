@@ -4,6 +4,7 @@ Simple browser-based finance tracker with:
 - Calendar view
 - Daily totals
 - Balance by day
+- Income vs Expenses line graph
 - Recurring transactions (daily, weekly, bi-weekly, monthly, quarterly, yearly)
 - CSV import/export
 - Local storage persistence
@@ -14,7 +15,7 @@ Open `index.html` in your browser.
 
 ## Use
 
-1. Add transactions using date, description, vendor, notes, amount, and recurrence.
+1. Add transactions using date, vendor, description, notes, amount, and recurrence.
    - Positive amount = income
    - Negative amount = expense
    - Vendor is optional (e.g., Walmart, Employer, Landlord)
@@ -26,17 +27,22 @@ Open `index.html` in your browser.
 2. Move between months with arrow buttons.
 3. Review daily and balance totals directly in the calendar.
 4. Click on a day to view all transactions for that specific date (including recurring instances).
-5. Export transactions with **Export CSV**.
-6. Choose import mode:
+5. Click "📊 View Graph" to see income vs expenses over time.
+   - Green line shows income trends
+   - Red line shows expense trends
+   - Adjust time range (30, 60, 90, 180, or 365 days)
+   - View summary statistics for the selected period
+6. Export transactions with **Export CSV**.
+7. Choose import mode:
    - **Merge Import** adds imported rows to existing data.
    - **Replace Import** overwrites existing data with imported rows.
-7. Import transactions with **Import CSV** (columns: date, description, vendor, notes, amount, recurrence).
+8. Import transactions with **Import CSV** (columns: date, vendor, description, notes, amount, recurrence).
    - Vendor, Notes, and Recurrence columns are optional.
    - Recurrence defaults to "one-time" if not provided.
    - Duplicate rows are skipped automatically.
    - An in-page preview dialog appears before applying import (valid, duplicate, invalid counts) with Confirm/Cancel.
    - Import results/errors are shown as small in-page toast notifications.
-8. Remove individual transactions or clear all data.
+9. Remove individual transactions or clear all data.
    - When removing a recurring transaction, all future instances are also removed.
    - Clear All uses an in-page confirmation dialog.
 
