@@ -324,6 +324,15 @@ body {
   padding: 16px;
 }
 
+.modal-card .transaction-form {
+  grid-template-columns: 1fr;
+}
+
+.modal-card select {
+  min-height: 44px;
+  font-size: 0.95rem;
+}
+
 .modal-card h3 {
   margin: 0 0 12px;
 }
@@ -357,23 +366,32 @@ body {
   display: flex;
   justify-content: flex-end;
   gap: 8px;
+  flex-wrap: wrap;
 }
 
 .modal-actions button {
   border: 1px solid var(--border);
   border-radius: 8px;
-  min-height: 36px;
-  padding: 8px 10px;
+  min-height: 40px;
+  padding: 10px 16px;
   font: inherit;
   background: #F8F5F0;
   color: var(--text);
   cursor: pointer;
+  font-size: 0.95rem;
 }
 
-#previewConfirm {
+#editTransactionForm button[type="submit"] {
   background: var(--accent);
   color: #F8F5F0;
   border: none;
+  min-height: 40px;
+  padding: 10px 16px;
+  font-size: 0.95rem;
+}
+
+#editTransactionForm button[type="submit"]:hover {
+  opacity: 0.9;
 }
 
 .danger-action {
