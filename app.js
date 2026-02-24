@@ -148,14 +148,30 @@ dateInput.addEventListener("blur", () => {
 });
 
 document.getElementById("clearAll").addEventListener("click", async () => {
-  if (!transactions.length) {
+  const year = currentMonth.getFullYear();
+  const month = currentMonth.getMonth();
+  
+  // Filter to check if there are any transactions in current month
+  const hasTransactionsInMonth = transactions.some(t => {
+    const tDate = new Date(t.date + 'T00:00:00');
+    return tDate.getFullYear() === year && tDate.getMonth() === month;
+  });
+  
+  if (!hasTransactionsInMonth) {
     return;
   }
   const confirmed = await openClearAllConfirm();
   if (!confirmed) {
     return;
   }
-  commitTransactions([]);
+  
+  // Keep only transactions NOT in the current month
+  const remainingTransactions = transactions.filter(t => {
+    const tDate = new Date(t.date + 'T00:00:00');
+    return !(tDate.getFullYear() === year && tDate.getMonth() === month);
+  });
+  
+  commitTransactions(remainingTransactions);
 });
 
 exportCsvButton.addEventListener("click", () => {
