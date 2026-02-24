@@ -5,6 +5,23 @@ const IMPORT_NO_VALID_ROWS_MESSAGE = "No valid transactions found in the CSV fil
 const IMPORT_READ_ERROR_MESSAGE = "Could not import this CSV file.";
 const TOAST_DURATION_MS = 3000;
 
+function generateUuid() {
+  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+    return crypto.randomUUID();
+  }
+
+  if (typeof crypto !== "undefined" && typeof crypto.getRandomValues === "function") {
+    const bytes = new Uint8Array(16);
+    crypto.getRandomValues(bytes);
+    bytes[6] = (bytes[6] & 0x0f) | 0x40;
+    bytes[8] = (bytes[8] & 0x3f) | 0x80;
+    const hex = Array.from(bytes, (byte) => byte.toString(16).padStart(2, "0"));
+    return `${hex.slice(0, 4).join("")}-${hex.slice(4, 6).join("")}-${hex.slice(6, 8).join("")}-${hex.slice(8, 10).join("")}-${hex.slice(10, 16).join("")}`;
+  }
+
+  return `uuid-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+}
+
 const yearSelect = document.getElementById("yearSelect");
 const monthSelect = document.getElementById("monthSelect");
 const calendarGrid = document.getElementById("calendarGrid");
@@ -69,7 +86,7 @@ let activeAccountId = loadActiveAccountId();
 // Initialize default account if none exists
 if (accounts.length === 0) {
   const defaultAccount = {
-    id: crypto.randomUUID(),
+    id: generateUuid(),
     name: "Main Account",
     transactions: migrateOldTransactions()
   };
@@ -402,8 +419,8 @@ transactionForm.addEventListener("submit", (event) => {
     return;
   }
 
-  const newTransactionId = crypto.randomUUID();
-  const linkedTransactionId = isTransfer ? crypto.randomUUID() : null;
+  const newTransactionId = generateUuid();
+  const linkedTransactionId = isTransfer ? generateUuid() : null;
 
   const newTransaction = {
     id: newTransactionId,
@@ -469,7 +486,7 @@ function loadTransactions() {
     return parsed
       .filter((entry) => entry && entry.date && entry.description && Number.isFinite(Number(entry.amount)))
       .map((entry) => ({
-        id: entry.id || crypto.randomUUID(),
+        id: entry.id || generateUuid(),
         date: entry.date,
         payee: entry.payee || entry.vendor || '',
         description: entry.description,
@@ -626,7 +643,7 @@ function parseCsv(content) {
     }
 
     result.push({
-      id: crypto.randomUUID(),
+      id: generateUuid(),
       date,
       description,
       payee,
@@ -1239,7 +1256,7 @@ function addAccount() {
   accountName = customName.trim() || accountName;
   
   const newAccount = {
-    id: crypto.randomUUID(),
+    id: generateUuid(),
     name: accountName,
     transactions: []
   };
@@ -1487,7 +1504,7 @@ editTransactionForm.addEventListener("submit", (event) => {
       alert("Please select an account to transfer to.");
       return;
     }
-    const linkedId = crypto.randomUUID();
+    const linkedId = generateUuid();
     txn.linkedTransactionId = linkedId;
     txn.linkedAccountId = transferToAccountId;
     
@@ -1514,7 +1531,7 @@ editTransactionForm.addEventListener("submit", (event) => {
   if (wasLinked && isTransfer && txn.linkedAccountId !== transferToAccountId) {
     deleteLinkedTransaction(txn.linkedTransactionId, txn.linkedAccountId);
     
-    const linkedId = crypto.randomUUID();
+    const linkedId = generateUuid();
     txn.linkedTransactionId = linkedId;
     txn.linkedAccountId = transferToAccountId;
     
