@@ -1,4 +1,6 @@
 const STORAGE_KEY = "finance-calendar-transactions";
+const ACCOUNTS_STORAGE_KEY = "finance-calendar-accounts";
+const ACTIVE_ACCOUNT_KEY = "finance-calendar-active-account";
 
 const timeRangeSelect = document.getElementById("timeRange");
 const yearSelect = document.getElementById("yearSelect");
@@ -16,9 +18,24 @@ let viewMode = "timeRange";
 
 function loadTransactions() {
   try {
+    // Try to load from multi-account storage first
+    const rawAccounts = localStorage.getItem(ACCOUNTS_STORAGE_KEY);
+    if (rawAccounts) {
+      const accounts = JSON.parse(rawAccounts);
+      const activeAccountId = localStorage.getItem(ACTIVE_ACCOUNT_KEY);
+      
+      // Find the active account or use the first one
+      const activeAccount = accounts.find(acc => acc.id === activeAccountId) || accounts[0];
+      if (activeAccount && activeAccount.transactions) {
+        return Array.isArray(activeAccount.transactions) ? activeAccount.transactions : [];
+      }
+    }
+    
+    // Fallback to old single-account storage
     const stored = localStorage.getItem(STORAGE_KEY);
     return stored ? JSON.parse(stored) : [];
-  } catch {
+  } catch (e) {
+    console.error("Error loading transactions:", e);
     return [];
   }
 }
