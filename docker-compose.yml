@@ -1,0 +1,23 @@
+version: '3.8'
+
+services:
+  finance-calendar:
+    build: .
+    container_name: finance-calendar
+    ports:
+      - "8080:80"
+    environment:
+      - TZ=UTC
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:80/index.html"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    networks:
+      - finance-network
+
+networks:
+  finance-network:
+    driver: bridge
