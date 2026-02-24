@@ -10,6 +10,9 @@ This guide will help you set up and run the Finance Calendar application in Dock
 
 ## Quick Start (Recommended)
 
+**Prefer a user-friendly UI instead of command line?**
+→ See [PORTAINER_SETUP.md](PORTAINER_SETUP.md) for step-by-step instructions using Portainer
+
 ### 1. Using Docker Compose
 
 Docker Compose is the easiest way to get started:

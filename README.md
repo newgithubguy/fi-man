@@ -26,6 +26,8 @@ Access at: `http://localhost:8080` or `http://YOUR_MACHINE_IP:8080`
 
 For detailed Docker setup instructions, see [DOCKER_SETUP.md](DOCKER_SETUP.md).
 
+**Prefer a UI?** Use [Portainer](PORTAINER_SETUP.md) for easy container management without command line.
+
 ### Option 3: Local HTTP Server
 ```bash
 # Python
