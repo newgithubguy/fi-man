@@ -1,6 +1,9 @@
 const STORAGE_KEY = "finance-calendar-transactions";
 const ACCOUNTS_STORAGE_KEY = "finance-calendar-accounts";
 const ACTIVE_ACCOUNT_KEY = "finance-calendar-active-account";
+const PAYEE_HISTORY_KEY = "finance-calendar-payee-history";
+const DESCRIPTION_HISTORY_KEY = "finance-calendar-description-history";
+const ENTRY_HISTORY_MAX_ITEMS = 100;
 const IMPORT_NO_VALID_ROWS_MESSAGE = "No valid transactions found in the CSV file.";
 const IMPORT_READ_ERROR_MESSAGE = "Could not import this CSV file.";
 const TOAST_DURATION_MS = 3000;
@@ -20,6 +23,87 @@ function generateUuid() {
   }
 
   return `uuid-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+}
+
+function loadEntryHistory(storageKey) {
+  try {
+    const raw = localStorage.getItem(storageKey);
+    const parsed = raw ? JSON.parse(raw) : [];
+    if (!Array.isArray(parsed)) {
+      return [];
+    }
+
+    return parsed
+      .map((value) => typeof value === "string" ? value.trim() : "")
+      .filter(Boolean)
+      .slice(0, ENTRY_HISTORY_MAX_ITEMS);
+  } catch {
+    return [];
+  }
+}
+
+function saveEntryHistory(storageKey, entries) {
+  localStorage.setItem(storageKey, JSON.stringify(entries.slice(0, ENTRY_HISTORY_MAX_ITEMS)));
+}
+
+function prependUniqueEntry(entries, value) {
+  const trimmed = typeof value === "string" ? value.trim() : "";
+  if (!trimmed) {
+    return entries;
+  }
+
+  const lowered = trimmed.toLowerCase();
+  const deduped = entries.filter((entry) => entry.toLowerCase() !== lowered);
+  return [trimmed, ...deduped].slice(0, ENTRY_HISTORY_MAX_ITEMS);
+}
+
+function ensureDatalist(input, listId) {
+  if (!input) {
+    return null;
+  }
+
+  input.setAttribute("list", listId);
+  let datalist = document.getElementById(listId);
+  if (!datalist) {
+    datalist = document.createElement("datalist");
+    datalist.id = listId;
+    document.body.appendChild(datalist);
+  }
+
+  return datalist;
+}
+
+function renderDatalistOptions(datalist, entries) {
+  if (!datalist) {
+    return;
+  }
+
+  datalist.innerHTML = "";
+  for (const entry of entries) {
+    const option = document.createElement("option");
+    option.value = entry;
+    datalist.appendChild(option);
+  }
+}
+
+function collectAccountFieldHistory(fieldName) {
+  const values = [];
+  for (const account of accounts) {
+    const rows = Array.isArray(account?.transactions) ? account.transactions : [];
+    for (const row of rows) {
+      const value = typeof row?.[fieldName] === "string" ? row[fieldName].trim() : "";
+      if (!value) {
+        continue;
+      }
+
+      const lowered = value.toLowerCase();
+      if (!values.some((entry) => entry.toLowerCase() === lowered)) {
+        values.push(value);
+      }
+    }
+  }
+
+  return values.slice(0, ENTRY_HISTORY_MAX_ITEMS);
 }
 
 const yearSelect = document.getElementById("yearSelect");
@@ -107,6 +191,52 @@ let currentMonth = new Date();
 currentMonth.setDate(1);
 let selectedDateKey = toDateKey(new Date());
 let editingTransactionId = null;
+let payeeHistory = loadEntryHistory(PAYEE_HISTORY_KEY);
+let descriptionHistory = loadEntryHistory(DESCRIPTION_HISTORY_KEY);
+
+function initializeEntryHistories() {
+  const accountPayees = collectAccountFieldHistory("payee");
+  const accountDescriptions = collectAccountFieldHistory("description");
+
+  payeeHistory = [...payeeHistory];
+  descriptionHistory = [...descriptionHistory];
+
+  for (const payee of accountPayees) {
+    payeeHistory = prependUniqueEntry(payeeHistory, payee);
+  }
+
+  for (const description of accountDescriptions) {
+    descriptionHistory = prependUniqueEntry(descriptionHistory, description);
+  }
+
+  saveEntryHistory(PAYEE_HISTORY_KEY, payeeHistory);
+  saveEntryHistory(DESCRIPTION_HISTORY_KEY, descriptionHistory);
+}
+
+function renderEntryHistorySuggestions() {
+  const payeeDatalist = ensureDatalist(payeeInput, "payeeHistoryList");
+  const descriptionDatalist = ensureDatalist(descriptionInput, "descriptionHistoryList");
+  renderDatalistOptions(payeeDatalist, payeeHistory);
+  renderDatalistOptions(descriptionDatalist, descriptionHistory);
+}
+
+function rememberFieldEntries({ payee, description }) {
+  const nextPayeeHistory = prependUniqueEntry(payeeHistory, payee);
+  const nextDescriptionHistory = prependUniqueEntry(descriptionHistory, description);
+
+  const payeeChanged = nextPayeeHistory !== payeeHistory;
+  const descriptionChanged = nextDescriptionHistory !== descriptionHistory;
+
+  if (!payeeChanged && !descriptionChanged) {
+    return;
+  }
+
+  payeeHistory = nextPayeeHistory;
+  descriptionHistory = nextDescriptionHistory;
+  saveEntryHistory(PAYEE_HISTORY_KEY, payeeHistory);
+  saveEntryHistory(DESCRIPTION_HISTORY_KEY, descriptionHistory);
+  renderEntryHistorySuggestions();
+}
 
 document.getElementById("prevMonth").addEventListener("click", () => {
   currentMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1);
@@ -458,6 +588,7 @@ transactionForm.addEventListener("submit", (event) => {
     }
   }
 
+  rememberFieldEntries({ payee, description });
   commitTransactions(nextTransactions);
   transactionForm.reset();
   recurrenceInput.value = "one-time";
@@ -1561,6 +1692,11 @@ editTransactionForm.addEventListener("submit", (event) => {
   txn.amount = Number(editAmountInput.value);
   txn.recurrence = editRecurrenceInput.value;
   txn.notes = editNotesInput.value.trim();
+
+  rememberFieldEntries({
+    payee: txn.payee,
+    description: txn.description,
+  });
   
   // Update linked transaction if it exists
   if (txn.linkedTransactionId && txn.linkedAccountId) {
@@ -1591,5 +1727,7 @@ function focusEntryFieldAfterDatePick() {
   if (dateInput) dateInput.value = selectedDateKey;
   if (transferAccountInput) updateTransferAccountOptions(transferAccountInput, transferAccountLabel);
   if (editTransferAccountInput) updateTransferAccountOptions(editTransferAccountInput, editTransferAccountLabel);
+  initializeEntryHistories();
+  renderEntryHistorySuggestions();
   render();
 })();

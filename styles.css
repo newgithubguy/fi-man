@@ -313,6 +313,43 @@ body {
   align-items: end;
 }
 
+.form-card {
+  padding: 12px;
+}
+
+.form-card h3 {
+  margin: 0 0 8px;
+}
+
+#transactionForm {
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: 8px;
+  align-items: start;
+}
+
+#transactionForm > label {
+  grid-column: span 2;
+}
+
+#transactionForm .notes-field {
+  grid-column: span 4;
+}
+
+#transactionForm textarea {
+  min-height: 44px;
+}
+
+#transactionForm .transfer-section {
+  grid-column: span 4;
+  padding: 8px;
+  gap: 8px;
+}
+
+#transactionForm button[type="submit"] {
+  grid-column: span 2;
+  align-self: end;
+}
+
 .transaction-form .notes-field {
   grid-column: 1 / -1;
 }
@@ -761,6 +798,13 @@ body {
 @media (max-width: 820px) {
   .transaction-form {
     grid-template-columns: 1fr;
+  }
+
+  #transactionForm > label,
+  #transactionForm .notes-field,
+  #transactionForm .transfer-section,
+  #transactionForm button[type="submit"] {
+    grid-column: 1;
   }
 
   .summary-row {
