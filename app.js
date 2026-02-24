@@ -264,8 +264,11 @@ function loadTransactions() {
       .map((entry) => ({
         id: entry.id || crypto.randomUUID(),
         date: entry.date,
+        vendor: entry.vendor || '',
         description: entry.description,
+        notes: entry.notes || '',
         amount: Number(entry.amount),
+        recurrence: entry.recurrence || 'one-time',
       }))
       .sort((a, b) => a.date.localeCompare(b.date));
   } catch {
