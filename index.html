@@ -15,9 +15,27 @@
 
     <section class="controls card">
       <div class="month-controls">
-        <button id="prevMonth" type="button" aria-label="Previous month">←</button>
-        <h2 id="monthLabel"></h2>
-        <button id="nextMonth" type="button" aria-label="Next month">→</button>
+        <label>
+          Year
+          <select id="yearSelect"></select>
+        </label>
+        <label>
+          Month
+          <select id="monthSelect">
+            <option value="0">January</option>
+            <option value="1">February</option>
+            <option value="2">March</option>
+            <option value="3">April</option>
+            <option value="4">May</option>
+            <option value="5">June</option>
+            <option value="6">July</option>
+            <option value="7">August</option>
+            <option value="8">September</option>
+            <option value="9">October</option>
+            <option value="10">November</option>
+            <option value="11">December</option>
+          </select>
+        </label>
         <a href="graph.html" class="graph-link">📊 View Graph</a>
       </div>
 
@@ -132,6 +150,50 @@
         <button id="clearAllCancel" type="button">Cancel</button>
         <button id="clearAllConfirm" type="button" class="danger-action">Delete All</button>
       </div>
+    </section>
+  </div>
+
+  <div id="editTransactionModal" class="modal-backdrop" hidden aria-hidden="true">
+    <section class="modal-card" role="dialog" aria-modal="true" aria-labelledby="editTransactionTitle">
+      <h3 id="editTransactionTitle">Edit Transaction</h3>
+      <form id="editTransactionForm" class="transaction-form">
+        <label>
+          Date
+          <input id="editDateInput" type="date" required />
+        </label>
+        <label>
+          Vendor
+          <input id="editVendorInput" type="text" maxlength="60" placeholder="Walmart, Employer, Landlord..." />
+        </label>
+        <label>
+          Description
+          <input id="editDescriptionInput" type="text" maxlength="80" placeholder="Groceries, Salary, Rent..." required />
+        </label>
+        <label>
+          Amount
+          <input id="editAmountInput" type="number" step="0.01" placeholder="Use negative for expenses" required />
+        </label>
+        <label>
+          Recurrence
+          <select id="editRecurrenceInput">
+            <option value="one-time" selected>One-time</option>
+            <option value="daily">Daily</option>
+            <option value="weekly">Weekly</option>
+            <option value="bi-weekly">Bi-weekly</option>
+            <option value="monthly">Monthly</option>
+            <option value="quarterly">Quarterly</option>
+            <option value="yearly">Yearly</option>
+          </select>
+        </label>
+        <label class="notes-field">
+          Notes
+          <textarea id="editNotesInput" maxlength="200" placeholder="Optional notes or memo..."></textarea>
+        </label>
+        <div class="modal-actions">
+          <button id="editCancel" type="button">Cancel</button>
+          <button type="submit">Save Changes</button>
+        </div>
+      </form>
     </section>
   </div>
 

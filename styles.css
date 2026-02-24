@@ -50,21 +50,24 @@ body {
   align-items: center;
   justify-content: center;
   gap: 10px;
+  flex-wrap: wrap;
 }
 
-.month-controls button {
+.month-controls label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.month-controls select {
   border: 1px solid var(--border);
   background: #F8F5F0;
-  width: 34px;
-  height: 34px;
   border-radius: 8px;
+  padding: 6px 8px;
   cursor: pointer;
-}
-
-.month-controls h2 {
-  margin: 0;
-  min-width: 220px;
-  text-align: center;
+  font-size: 0.9rem;
 }
 
 .summary-row {
@@ -265,7 +268,7 @@ body {
   border-radius: 8px;
   padding: 10px;
   display: grid;
-  grid-template-columns: 140px 1fr 140px 1fr 120px auto;
+  grid-template-columns: 140px 1fr 140px 1fr 120px auto auto;
   gap: 8px;
   align-items: center;
 }
@@ -287,12 +290,17 @@ body {
   cursor: pointer;
 }
 
-.remove-btn {
+.remove-btn,
+.edit-btn {
   border: 1px solid var(--border);
   border-radius: 6px;
   padding: 4px 8px;
   cursor: pointer;
   background: #F8F5F0;
+}
+
+.edit-btn {
+  margin-right: 4px;
 }
 
 .modal-backdrop {

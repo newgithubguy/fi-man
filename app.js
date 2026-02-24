@@ -3,7 +3,8 @@ const IMPORT_NO_VALID_ROWS_MESSAGE = "No valid transactions found in the CSV fil
 const IMPORT_READ_ERROR_MESSAGE = "Could not import this CSV file.";
 const TOAST_DURATION_MS = 3000;
 
-const monthLabel = document.getElementById("monthLabel");
+const yearSelect = document.getElementById("yearSelect");
+const monthSelect = document.getElementById("monthSelect");
 const calendarGrid = document.getElementById("calendarGrid");
 const transactionForm = document.getElementById("transactionForm");
 const dateInput = document.getElementById("dateInput");
@@ -35,19 +36,33 @@ const previewConfirm = document.getElementById("previewConfirm");
 const clearAllModal = document.getElementById("clearAllModal");
 const clearAllCancel = document.getElementById("clearAllCancel");
 const clearAllConfirm = document.getElementById("clearAllConfirm");
+const editTransactionModal = document.getElementById("editTransactionModal");
+const editTransactionForm = document.getElementById("editTransactionForm");
+const editDateInput = document.getElementById("editDateInput");
+const editVendorInput = document.getElementById("editVendorInput");
+const editDescriptionInput = document.getElementById("editDescriptionInput");
+const editAmountInput = document.getElementById("editAmountInput");
+const editRecurrenceInput = document.getElementById("editRecurrenceInput");
+const editNotesInput = document.getElementById("editNotesInput");
+const editCancel = document.getElementById("editCancel");
 
 let transactions = loadTransactions();
 let currentMonth = new Date();
 currentMonth.setDate(1);
 let selectedDateKey = toDateKey(new Date());
+let editingTransactionId = null;
 
-document.getElementById("prevMonth").addEventListener("click", () => {
-  currentMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1);
+document.getElementById("yearSelect").addEventListener("change", () => {
+  const year = parseInt(yearSelect.value);
+  const month = currentMonth.getMonth();
+  currentMonth = new Date(year, month, 1);
   render();
 });
 
-document.getElementById("nextMonth").addEventListener("click", () => {
-  currentMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1);
+document.getElementById("monthSelect").addEventListener("change", () => {
+  const year = currentMonth.getFullYear();
+  const month = parseInt(monthSelect.value);
+  currentMonth = new Date(year, month, 1);
   render();
 });
 
@@ -718,10 +733,10 @@ function getBalanceBefore(dateKey) {
 function renderCalendar() {
   const year = currentMonth.getFullYear();
   const month = currentMonth.getMonth();
-  monthLabel.textContent = currentMonth.toLocaleDateString(undefined, {
-    month: "long",
-    year: "numeric",
-  });
+  
+  // Sync selectors with current month
+  yearSelect.value = year;
+  monthSelect.value = month;
 
   const firstOfMonth = new Date(year, month, 1);
   const lastOfMonth = new Date(year, month + 1, 0);
@@ -852,18 +867,28 @@ function renderTransactions() {
     amount.textContent = formatCurrency(item.amount);
     amount.className = item.amount >= 0 ? "positive" : "negative";
 
+    // Get the ID to use for operations
+    const idToUse = item.isRecurring ? item.originalId : item.id;
+    
+    // Edit button (only for non-recurring instances)
+    const editButton = document.createElement("button");
+    editButton.type = "button";
+    editButton.className = "edit-btn";
+    editButton.textContent = "Edit";
+    editButton.addEventListener("click", () => {
+      openEditTransactionModal(idToUse);
+    });
+
     const removeButton = document.createElement("button");
     removeButton.type = "button";
     removeButton.className = "remove-btn";
     removeButton.textContent = "Remove";
     removeButton.addEventListener("click", () => {
-      // If it's a recurring instance, remove the original transaction
-      const idToRemove = item.isRecurring ? item.originalId : item.id;
-      const remainingTransactions = transactions.filter((tx) => tx.id !== idToRemove);
+      const remainingTransactions = transactions.filter((tx) => tx.id !== idToUse);
       commitTransactions(remainingTransactions);
     });
 
-    row.append(date, vendor, description, notes, amount, removeButton);
+    row.append(date, vendor, description, notes, amount, editButton, removeButton);
     transactionList.appendChild(row);
   }
 }
@@ -950,6 +975,82 @@ function applyFieldValidationState({ input, hint, message }) {
   hint.classList.toggle("visible", Boolean(message));
   input.classList.toggle("input-invalid", Boolean(message));
 }
+
+function populateYearSelect() {
+  const currentYear = new Date().getFullYear();
+  const years = new Set();
+  
+  // Add years from current - 5 to current + 3
+  for (let i = currentYear - 5; i <= currentYear + 3; i++) {
+    years.add(i);
+  }
+  
+  // Add years from existing transactions
+  for (const txn of transactions) {
+    const year = parseInt(txn.date.substring(0, 4));
+    years.add(year);
+  }
+  
+  const sortedYears = Array.from(years).sort();
+  yearSelect.innerHTML = sortedYears.map(year => 
+    `<option value="${year}" ${year === currentYear ? 'selected' : ''}>${year}</option>`
+  ).join('');
+}
+
+function openEditTransactionModal(transactionId) {
+  editingTransactionId = transactionId;
+  
+  // Find the transaction to edit
+  const txn = transactions.find(t => t.id === transactionId);
+  if (!txn) return;
+  
+  // Populate form fields
+  editDateInput.value = txn.date;
+  editVendorInput.value = txn.vendor || '';
+  editDescriptionInput.value = txn.description || '';
+  editAmountInput.value = txn.amount;
+  editRecurrenceInput.value = txn.recurrence || 'one-time';
+  editNotesInput.value = txn.notes || '';
+  
+  editTransactionModal.hidden = false;
+  editTransactionModal.setAttribute('aria-hidden', 'false');
+  editDateInput.focus();
+}
+
+function closeEditTransactionModal() {
+  editingTransactionId = null;
+  editTransactionModal.hidden = true;
+  editTransactionModal.setAttribute('aria-hidden', 'true');
+}
+
+editCancel.addEventListener("click", closeEditTransactionModal);
+
+editTransactionForm.addEventListener("submit", (event) => {
+  event.preventDefault();
+  
+  if (!editingTransactionId) return;
+  
+  const txn = transactions.find(t => t.id === editingTransactionId);
+  if (!txn) return;
+  
+  // Update transaction properties
+  txn.date = editDateInput.value;
+  txn.vendor = editVendorInput.value.trim();
+  txn.description = editDescriptionInput.value.trim();
+  txn.amount = Number(editAmountInput.value);
+  txn.recurrence = editRecurrenceInput.value;
+  txn.notes = editNotesInput.value.trim();
+  
+  commitTransactions(transactions);
+  closeEditTransactionModal();
+  showToast({ message: "Transaction updated successfully.", type: "success" });
+});
+
+// Initialize
+// Initialize
+populateYearSelect();
+yearSelect.value = currentMonth.getFullYear();
+monthSelect.value = currentMonth.getMonth();
 
 function focusEntryFieldAfterDatePick() {
   if (descriptionInput.value.trim()) {
