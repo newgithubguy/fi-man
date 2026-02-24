@@ -1,4 +1,6 @@
 const STORAGE_KEY = "finance-calendar-transactions";
+const ACCOUNTS_STORAGE_KEY = "finance-calendar-accounts";
+const ACTIVE_ACCOUNT_KEY = "finance-calendar-active-account";
 const IMPORT_NO_VALID_ROWS_MESSAGE = "No valid transactions found in the CSV file.";
 const IMPORT_READ_ERROR_MESSAGE = "Could not import this CSV file.";
 const TOAST_DURATION_MS = 3000;
@@ -51,6 +53,37 @@ const exportFromDate = document.getElementById("exportFromDate");
 const exportToDate = document.getElementById("exportToDate");
 const exportTransactionCount = document.getElementById("exportTransactionCount");
 const exportCancel = document.getElementById("exportCancel");
+const accountsList = document.getElementById("accountsList");
+const addAccountBtn = document.getElementById("addAccountBtn");
+const isTransferInput = document.getElementById("isTransferInput");
+const transferAccountInput = document.getElementById("transferAccountInput");
+const transferAccountLabel = document.getElementById("transferAccountLabel");
+const editIsTransferInput = document.getElementById("editIsTransferInput");
+const editTransferAccountInput = document.getElementById("editTransferAccountInput");
+const editTransferAccountLabel = document.getElementById("editTransferAccountLabel");
+
+// Account management
+let accounts = loadAccounts();
+let activeAccountId = loadActiveAccountId();
+
+// Initialize default account if none exists
+if (accounts.length === 0) {
+  const defaultAccount = {
+    id: crypto.randomUUID(),
+    name: "Main Account",
+    transactions: migrateOldTransactions()
+  };
+  accounts = [defaultAccount];
+  activeAccountId = defaultAccount.id;
+  saveAccounts();
+  saveActiveAccountId();
+}
+
+// Ensure active account is valid
+if (!accounts.find(acc => acc.id === activeAccountId)) {
+  activeAccountId = accounts[0]?.id || null;
+  saveActiveAccountId();
+}
 
 let transactions = loadTransactions();
 let currentMonth = new Date();
@@ -66,6 +99,26 @@ document.getElementById("prevMonth").addEventListener("click", () => {
 document.getElementById("nextMonth").addEventListener("click", () => {
   currentMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1);
   render();
+});
+
+addAccountBtn.addEventListener("click", addAccount);
+
+isTransferInput.addEventListener("change", () => {
+  if (isTransferInput.checked) {
+    updateTransferAccountOptions(transferAccountInput, transferAccountLabel);
+    transferAccountLabel.classList.remove("hidden");
+  } else {
+    transferAccountLabel.classList.add("hidden");
+  }
+});
+
+editIsTransferInput.addEventListener("change", () => {
+  if (editIsTransferInput.checked) {
+    updateTransferAccountOptions(editTransferAccountInput, editTransferAccountLabel);
+    editTransferAccountLabel.classList.remove("hidden");
+  } else {
+    editTransferAccountLabel.classList.add("hidden");
+  }
 });
 
 document.getElementById("yearSelect").addEventListener("change", () => {
@@ -328,6 +381,8 @@ transactionForm.addEventListener("submit", (event) => {
   const notes = notesInput.value.trim();
   const amount = Number(amountInput.value);
   const recurrence = recurrenceInput.value;
+  const isTransfer = isTransferInput.checked;
+  const transferToAccountId = transferAccountInput.value;
 
   if (!date || !description || Number.isNaN(amount) || amount === 0) {
     setDateValidationHint({ showRequiredWhenEmpty: true });
@@ -336,23 +391,57 @@ transactionForm.addEventListener("submit", (event) => {
     return;
   }
 
-  const nextTransactions = [
-    ...transactions,
-    {
-      id: crypto.randomUUID(),
-      date,
-      description,
-      payee,
-      notes,
-      amount,
-      recurrence,
-    },
-  ];
+  if (isTransfer && !transferToAccountId) {
+    alert("Please select an account to transfer to.");
+    return;
+  }
+
+  const newTransactionId = crypto.randomUUID();
+  const linkedTransactionId = isTransfer ? crypto.randomUUID() : null;
+
+  const newTransaction = {
+    id: newTransactionId,
+    date,
+    description,
+    payee,
+    notes,
+    amount,
+    recurrence,
+    linkedTransactionId,
+    linkedAccountId: isTransfer ? transferToAccountId : null,
+  };
+
+  const nextTransactions = [...transactions, newTransaction];
+
+  // If it's a transfer, create the linked transaction in the other account
+  if (isTransfer && transferToAccountId) {
+    const targetAccount = accounts.find(acc => acc.id === transferToAccountId);
+    if (targetAccount) {
+      const linkedTransaction = {
+        id: linkedTransactionId,
+        date,
+        description,
+        payee,
+        notes,
+        amount: -amount, // Opposite amount
+        recurrence,
+        linkedTransactionId: newTransactionId,
+        linkedAccountId: activeAccountId,
+      };
+      
+      targetAccount.transactions = targetAccount.transactions || [];
+      targetAccount.transactions.push(linkedTransaction);
+      saveAccounts();
+    }
+  }
 
   commitTransactions(nextTransactions);
   transactionForm.reset();
   recurrenceInput.value = "one-time";
   dateInput.value = selectedDateKey;
+  isTransferInput.checked = false;
+  transferAccountLabel.classList.add("hidden");
+  updateTransferAccountOptions();
   setDateValidationHint();
   setDescriptionValidationHint();
   setAmountValidationHint();
@@ -360,9 +449,13 @@ transactionForm.addEventListener("submit", (event) => {
 });
 
 function loadTransactions() {
+  const activeAccount = accounts.find(acc => acc.id === activeAccountId);
+  if (!activeAccount) {
+    return [];
+  }
+
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    const parsed = raw ? JSON.parse(raw) : [];
+    const parsed = activeAccount.transactions || [];
     if (!Array.isArray(parsed)) {
       return [];
     }
@@ -377,6 +470,8 @@ function loadTransactions() {
         notes: entry.notes || '',
         amount: Number(entry.amount),
         recurrence: entry.recurrence || 'one-time',
+        linkedTransactionId: entry.linkedTransactionId || null,
+        linkedAccountId: entry.linkedAccountId || null,
       }))
       .sort((a, b) => a.date.localeCompare(b.date));
   } catch {
@@ -384,8 +479,46 @@ function loadTransactions() {
   }
 }
 
+function migrateOldTransactions() {
+  // Migrate old transactions from single-account storage
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+function loadAccounts() {
+  try {
+    const raw = localStorage.getItem(ACCOUNTS_STORAGE_KEY);
+    const parsed = raw ? JSON.parse(raw) : [];
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveAccounts() {
+  localStorage.setItem(ACCOUNTS_STORAGE_KEY, JSON.stringify(accounts));
+}
+
+function loadActiveAccountId() {
+  return localStorage.getItem(ACTIVE_ACCOUNT_KEY);
+}
+
+function saveActiveAccountId() {
+  localStorage.setItem(ACTIVE_ACCOUNT_KEY, activeAccountId);
+}
+
 function persistTransactions() {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(transactions));
+  const activeAccount = accounts.find(acc => acc.id === activeAccountId);
+  if (activeAccount) {
+    activeAccount.transactions = transactions;
+    saveAccounts();
+  }
 }
 
 function commitTransactions(nextTransactions) {
@@ -983,6 +1116,15 @@ function renderTransactions() {
 
     const description = document.createElement("span");
     description.textContent = item.description + (item.isRecurring ? " (recurring)" : "");
+    
+    // Add linked indicator if transaction is linked to another account
+    if (item.linkedTransactionId && item.linkedAccountId) {
+      const linkedIndicator = document.createElement("span");
+      linkedIndicator.className = "linked-indicator";
+      linkedIndicator.textContent = getAccountNameById(item.linkedAccountId);
+      linkedIndicator.title = `Linked to ${getAccountNameById(item.linkedAccountId)}`;
+      description.appendChild(linkedIndicator);
+    }
 
     const notes = document.createElement("span");
     notes.textContent = item.notes || "—";
@@ -1009,6 +1151,13 @@ function renderTransactions() {
     removeButton.className = "remove-btn";
     removeButton.textContent = "Remove";
     removeButton.addEventListener("click", () => {
+      const txnToDelete = transactions.find(tx => tx.id === idToUse);
+      
+      // Delete linked transaction if exists
+      if (txnToDelete && txnToDelete.linkedTransactionId && txnToDelete.linkedAccountId) {
+        deleteLinkedTransaction(txnToDelete.linkedTransactionId, txnToDelete.linkedAccountId);
+      }
+      
       const remainingTransactions = transactions.filter((tx) => tx.id !== idToUse);
       commitTransactions(remainingTransactions);
     });
@@ -1021,6 +1170,148 @@ function renderTransactions() {
 function render() {
   renderCalendar();
   renderTransactions();
+  renderAccounts();
+}
+
+function renderAccounts() {
+  accountsList.innerHTML = '';
+  
+  accounts.forEach(account => {
+    const li = document.createElement('li');
+    li.className = 'account-item';
+    if (account.id === activeAccountId) {
+      li.classList.add('active');
+    }
+    
+    const nameSpan = document.createElement('span');
+    nameSpan.className = 'account-name';
+    nameSpan.textContent = account.name;
+    
+    const deleteBtn = document.createElement('button');
+    deleteBtn.className = 'delete-account-btn';
+    deleteBtn.textContent = '×';
+    deleteBtn.title = 'Delete account';
+    deleteBtn.onclick = (e) => {
+      e.stopPropagation();
+      deleteAccount(account.id);
+    };
+    
+    li.appendChild(nameSpan);
+    if (accounts.length > 1) {
+      li.appendChild(deleteBtn);
+    }
+    
+    li.onclick = () => switchAccount(account.id);
+    
+    accountsList.appendChild(li);
+  });
+  
+  // Update transfer account dropdowns
+  updateTransferAccountOptions(transferAccountInput, transferAccountLabel);
+  updateTransferAccountOptions(editTransferAccountInput, editTransferAccountLabel);
+}
+
+function switchAccount(accountId) {
+  if (activeAccountId === accountId) return;
+  
+  activeAccountId = accountId;
+  saveActiveAccountId();
+  transactions = loadTransactions();
+  render();
+}
+
+function addAccount() {
+  const accountNumber = accounts.length + 1;
+  let accountName = `Account ${accountNumber}`;
+  
+  // Prompt for account name
+  const customName = prompt('Enter account name:', accountName);
+  if (customName === null) return; // User cancelled
+  
+  accountName = customName.trim() || accountName;
+  
+  const newAccount = {
+    id: crypto.randomUUID(),
+    name: accountName,
+    transactions: []
+  };
+  
+  accounts.push(newAccount);
+  saveAccounts();
+  switchAccount(newAccount.id);
+}
+
+function deleteAccount(accountId) {
+  if (accounts.length === 1) {
+    alert('Cannot delete the last account.');
+    return;
+  }
+  
+  const account = accounts.find(acc => acc.id === accountId);
+  if (!account) return;
+  
+  if (!confirm(`Delete "${account.name}"? This will permanently delete all transactions in this account.`)) {
+    return;
+  }
+  
+  accounts = accounts.filter(acc => acc.id !== accountId);
+  
+  if (activeAccountId === accountId) {
+    activeAccountId = accounts[0].id;
+    saveActiveAccountId();
+    transactions = loadTransactions();
+  }
+  
+  saveAccounts();
+  render();
+}
+
+function updateTransferAccountOptions(selectElement, labelElement) {
+  selectElement.innerHTML = '';
+  
+  accounts.forEach(account => {
+    if (account.id !== activeAccountId) {
+      const option = document.createElement('option');
+      option.value = account.id;
+      option.textContent = account.name;
+      selectElement.appendChild(option);
+    }
+  });
+}
+
+function deleteLinkedTransaction(linkedTransactionId, linkedAccountId) {
+  const linkedAccount = accounts.find(acc => acc.id === linkedAccountId);
+  if (linkedAccount) {
+    linkedAccount.transactions = (linkedAccount.transactions || []).filter(
+      t => t.id !== linkedTransactionId
+    );
+    saveAccounts();
+  }
+}
+
+function updateLinkedTransaction(txn) {
+  if (!txn.linkedTransactionId || !txn.linkedAccountId) return;
+  
+  const linkedAccount = accounts.find(acc => acc.id === txn.linkedAccountId);
+  if (linkedAccount) {
+    const linkedTxn = (linkedAccount.transactions || []).find(
+      t => t.id === txn.linkedTransactionId
+    );
+    if (linkedTxn) {
+      linkedTxn.date = txn.date;
+      linkedTxn.description = txn.description;
+      linkedTxn.payee = txn.payee;
+      linkedTxn.notes = txn.notes;
+      linkedTxn.amount = -txn.amount; // Keep opposite amount
+      linkedTxn.recurrence = txn.recurrence;
+      saveAccounts();
+    }
+  }
+}
+
+function getAccountNameById(accountId) {
+  const account = accounts.find(acc => acc.id === accountId);
+  return account ? account.name : 'Unknown Account';
 }
 
 function selectCalendarDate(dateKey) {
@@ -1137,6 +1428,17 @@ function openEditTransactionModal(transactionId) {
   editRecurrenceInput.value = txn.recurrence || 'one-time';
   editNotesInput.value = txn.notes || '';
   
+  // Handle transfer fields
+  const isLinked = Boolean(txn.linkedTransactionId && txn.linkedAccountId);
+  editIsTransferInput.checked = isLinked;
+  if (isLinked) {
+    updateTransferAccountOptions(editTransferAccountInput, editTransferAccountLabel);
+    editTransferAccountInput.value = txn.linkedAccountId;
+    editTransferAccountLabel.classList.remove('hidden');
+  } else {
+    editTransferAccountLabel.classList.add('hidden');
+  }
+  
   editTransactionModal.hidden = false;
   editTransactionModal.setAttribute('aria-hidden', 'false');
   editDateInput.focus();
@@ -1158,6 +1460,73 @@ editTransactionForm.addEventListener("submit", (event) => {
   const txn = transactions.find(t => t.id === editingTransactionId);
   if (!txn) return;
   
+  const wasLinked = Boolean(txn.linkedTransactionId && txn.linkedAccountId);
+  const isTransfer = editIsTransferInput.checked;
+  const transferToAccountId = editTransferAccountInput.value;
+  
+  // Handle unlinking
+  if (wasLinked && !isTransfer) {
+    deleteLinkedTransaction(txn.linkedTransactionId, txn.linkedAccountId);
+    txn.linkedTransactionId = null;
+    txn.linkedAccountId = null;
+  }
+  
+  // Handle new linking
+  if (!wasLinked && isTransfer) {
+    if (!transferToAccountId) {
+      alert("Please select an account to transfer to.");
+      return;
+    }
+    const linkedId = crypto.randomUUID();
+    txn.linkedTransactionId = linkedId;
+    txn.linkedAccountId = transferToAccountId;
+    
+    const targetAccount = accounts.find(acc => acc.id === transferToAccountId);
+    if (targetAccount) {
+      const linkedTransaction = {
+        id: linkedId,
+        date: editDateInput.value,
+        description: editDescriptionInput.value.trim(),
+        payee: editPayeeInput.value.trim(),
+        notes: editNotesInput.value.trim(),
+        amount: -Number(editAmountInput.value),
+        recurrence: editRecurrenceInput.value,
+        linkedTransactionId: txn.id,
+        linkedAccountId: activeAccountId,
+      };
+      targetAccount.transactions = targetAccount.transactions || [];
+      targetAccount.transactions.push(linkedTransaction);
+      saveAccounts();
+    }
+  }
+  
+  // Handle change in linked account
+  if (wasLinked && isTransfer && txn.linkedAccountId !== transferToAccountId) {
+    deleteLinkedTransaction(txn.linkedTransactionId, txn.linkedAccountId);
+    
+    const linkedId = crypto.randomUUID();
+    txn.linkedTransactionId = linkedId;
+    txn.linkedAccountId = transferToAccountId;
+    
+    const targetAccount = accounts.find(acc => acc.id === transferToAccountId);
+    if (targetAccount) {
+      const linkedTransaction = {
+        id: linkedId,
+        date: editDateInput.value,
+        description: editDescriptionInput.value.trim(),
+        payee: editPayeeInput.value.trim(),
+        notes: editNotesInput.value.trim(),
+        amount: -Number(editAmountInput.value),
+        recurrence: editRecurrenceInput.value,
+        linkedTransactionId: txn.id,
+        linkedAccountId: activeAccountId,
+      };
+      targetAccount.transactions = targetAccount.transactions || [];
+      targetAccount.transactions.push(linkedTransaction);
+      saveAccounts();
+    }
+  }
+  
   // Update transaction properties
   txn.date = editDateInput.value;
   txn.payee = editPayeeInput.value.trim();
@@ -1165,6 +1534,11 @@ editTransactionForm.addEventListener("submit", (event) => {
   txn.amount = Number(editAmountInput.value);
   txn.recurrence = editRecurrenceInput.value;
   txn.notes = editNotesInput.value.trim();
+  
+  // Update linked transaction if it exists
+  if (txn.linkedTransactionId && txn.linkedAccountId) {
+    updateLinkedTransaction(txn);
+  }
   
   commitTransactions(transactions);
   closeEditTransactionModal();
@@ -1188,5 +1562,7 @@ function focusEntryFieldAfterDatePick() {
 
 (function initialize() {
   dateInput.value = selectedDateKey;
+  updateTransferAccountOptions(transferAccountInput, transferAccountLabel);
+  updateTransferAccountOptions(editTransferAccountInput, editTransferAccountLabel);
   render();
 })();

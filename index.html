@@ -7,6 +7,14 @@
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
+  <aside class="accounts-sidebar">
+    <div class="accounts-header">
+      <h2>Accounts</h2>
+      <button id="addAccountBtn" type="button" class="add-account-btn" title="Add new account">+</button>
+    </div>
+    <ul id="accountsList" class="accounts-list"></ul>
+  </aside>
+
   <main class="app">
     <header class="topbar">
       <h1>Finance Calendar</h1>
@@ -105,6 +113,17 @@
           <textarea id="notesInput" maxlength="200" placeholder="Optional notes or memo..."></textarea>
           <span class="field-hint"></span>
         </label>
+        <div class="transfer-section">
+          <label class="checkbox-label">
+            <input id="isTransferInput" type="checkbox" />
+            <span>Transfer to another account</span>
+          </label>
+          <label id="transferAccountLabel" class="hidden">
+            Transfer to Account
+            <select id="transferAccountInput">
+            </select>
+          </label>
+        </div>
         <button type="submit">Add</button>
       </form>
     </section>
@@ -191,6 +210,17 @@
           Notes
           <textarea id="editNotesInput" maxlength="200" placeholder="Optional notes or memo..."></textarea>
         </label>
+        <div class="transfer-section">
+          <label class="checkbox-label">
+            <input id="editIsTransferInput" type="checkbox" />
+            <span>Transfer to another account</span>
+          </label>
+          <label id="editTransferAccountLabel" class="hidden">
+            Transfer to Account
+            <select id="editTransferAccountInput">
+            </select>
+          </label>
+        </div>
         <div class="modal-actions">
           <button id="editCancel" type="button">Cancel</button>
           <button type="submit">Save Changes</button>
