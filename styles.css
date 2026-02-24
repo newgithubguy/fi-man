@@ -295,7 +295,7 @@ body {
   border-radius: 8px;
   padding: 10px;
   display: grid;
-  grid-template-columns: 140px 1fr 140px 1fr 120px auto auto;
+  grid-template-columns: 100px 90px 90px 1fr 1fr 100px auto auto;
   gap: 8px;
   align-items: center;
 }
@@ -303,6 +303,12 @@ body {
 .vendor {
   color: var(--muted);
   font-size: 0.9rem;
+}
+
+.recurrence {
+  color: var(--muted);
+  font-size: 0.85rem;
+  text-transform: capitalize;
 }
 
 .notes {
@@ -546,6 +552,7 @@ body {
 
   .transaction-list li {
     grid-template-columns: 1fr;
+    gap: 10px;
   }
 
   .list-header {

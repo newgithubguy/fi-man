@@ -869,6 +869,10 @@ function renderTransactions() {
     vendor.textContent = item.vendor || "—";
     vendor.className = "vendor";
 
+    const recurrence = document.createElement("span");
+    recurrence.textContent = item.recurrence && item.recurrence !== 'one-time' ? item.recurrence : "—";
+    recurrence.className = "recurrence";
+
     const description = document.createElement("span");
     description.textContent = item.description + (item.isRecurring ? " (recurring)" : "");
 
@@ -901,7 +905,7 @@ function renderTransactions() {
       commitTransactions(remainingTransactions);
     });
 
-    row.append(date, vendor, description, notes, amount, editButton, removeButton);
+    row.append(date, vendor, recurrence, description, notes, amount, editButton, removeButton);
     transactionList.appendChild(row);
   }
 }
