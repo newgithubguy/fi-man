@@ -366,6 +366,7 @@ body {
   padding: 8px 10px;
   font: inherit;
   background: #F8F5F0;
+  color: var(--text);
   cursor: pointer;
 }
 
