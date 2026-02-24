@@ -10,9 +10,13 @@ const dateInput = document.getElementById("dateInput");
 const dateHint = document.getElementById("dateHint");
 const descriptionInput = document.getElementById("descriptionInput");
 const descriptionHint = document.getElementById("descriptionHint");
+const vendorInput = document.getElementById("vendorInput");
+const notesInput = document.getElementById("notesInput");
 const amountInput = document.getElementById("amountInput");
 const amountHint = document.getElementById("amountHint");
+const recurrenceInput = document.getElementById("recurrenceInput");
 const transactionList = document.getElementById("transactionList");
+const transactionListTitle = document.getElementById("transactionListTitle");
 const monthChangeDisplay = document.getElementById("monthChangeDisplay");
 const endBalanceDisplay = document.getElementById("endBalanceDisplay");
 const startingBalanceDisplay = document.getElementById("startingBalanceDisplay");
@@ -187,7 +191,10 @@ transactionForm.addEventListener("submit", (event) => {
 
   const date = dateInput.value;
   const description = descriptionInput.value.trim();
+  const vendor = vendorInput.value.trim();
+  const notes = notesInput.value.trim();
   const amount = Number(amountInput.value);
+  const recurrence = recurrenceInput.value;
 
   if (!date || !description || Number.isNaN(amount) || amount === 0) {
     setDateValidationHint({ showRequiredWhenEmpty: true });
@@ -202,12 +209,16 @@ transactionForm.addEventListener("submit", (event) => {
       id: crypto.randomUUID(),
       date,
       description,
+      vendor,
+      notes,
       amount,
+      recurrence,
     },
   ];
 
   commitTransactions(nextTransactions);
   transactionForm.reset();
+  recurrenceInput.value = "one-time";
   dateInput.value = selectedDateKey;
   setDateValidationHint();
   setDescriptionValidationHint();
@@ -248,11 +259,14 @@ function commitTransactions(nextTransactions) {
 }
 
 function toCsv(rows) {
-  const header = ["date", "description", "amount"];
+  const header = ["date", "description", "vendor", "notes", "amount", "recurrence"];
   const lines = [header.join(",")];
   for (const row of rows) {
     const escapedDescription = row.description.replace(/"/g, '""');
-    lines.push(`${row.date},"${escapedDescription}",${row.amount}`);
+    const escapedVendor = (row.vendor || "").replace(/"/g, '""');
+    const escapedNotes = (row.notes || "").replace(/"/g, '""');
+    const recurrence = row.recurrence || "one-time";
+    lines.push(`${row.date},"${escapedDescription}","${escapedVendor}","${escapedNotes}",${row.amount},${recurrence}`);
   }
   return `${lines.join("\n")}\n`;
 }
@@ -274,7 +288,12 @@ function parseCsv(content) {
 
   const result = [];
   let invalidRows = 0;
-  const startIndex = /^date\s*,\s*description\s*,\s*amount$/i.test(lines[0]) ? 1 : 0;
+  
+  // Check if first line is a header and detect format
+  const hasHeader = /^date\s*,\s*description/i.test(lines[0]);
+  const hasNotesColumn = hasHeader && /notes/i.test(lines[0]);
+  const hasVendorColumn = hasHeader && /vendor/i.test(lines[0]);
+  const startIndex = hasHeader ? 1 : 0;
   const totalRows = Math.max(lines.length - startIndex, 0);
 
   for (let index = startIndex; index < lines.length; index++) {
@@ -284,9 +303,33 @@ function parseCsv(content) {
       continue;
     }
 
-    const date = values[0].trim();
-    const description = values[1].trim();
-    const amount = Number(values[2]);
+    let date, description, vendor, notes, amount, recurrence;
+    
+    if (hasNotesColumn) {
+      // Latest format: date, description, vendor, notes, amount, recurrence
+      date = values[0].trim();
+      description = values[1].trim();
+      vendor = values.length > 2 ? values[2].trim() : "";
+      notes = values.length > 3 ? values[3].trim() : "";
+      amount = Number(values.length > 4 ? values[4] : 0);
+      recurrence = values.length > 5 ? values[5].trim() : "one-time";
+    } else if (hasVendorColumn) {
+      // Previous format: date, description, vendor, amount, recurrence
+      date = values[0].trim();
+      description = values[1].trim();
+      vendor = values.length > 2 ? values[2].trim() : "";
+      notes = "";
+      amount = Number(values.length > 3 ? values[3] : 0);
+      recurrence = values.length > 4 ? values[4].trim() : "one-time";
+    } else {
+      // Old format: date, description, amount, recurrence (or just date, description, amount)
+      date = values[0].trim();
+      description = values[1].trim();
+      vendor = "";
+      notes = "";
+      amount = Number(values[2]);
+      recurrence = values.length > 3 ? values[3].trim() : "one-time";
+    }
 
     if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !description || !Number.isFinite(amount) || amount === 0) {
       invalidRows++;
@@ -297,7 +340,10 @@ function parseCsv(content) {
       id: crypto.randomUUID(),
       date,
       description,
+      vendor,
+      notes,
       amount,
+      recurrence: recurrence || "one-time",
     });
   }
 
@@ -554,16 +600,103 @@ function formatCurrency(value) {
   }).format(value);
 }
 
+function getNextRecurrenceDate(dateStr, recurrence) {
+  const date = new Date(dateStr + 'T00:00:00');
+  
+  switch (recurrence) {
+    case 'daily':
+      date.setDate(date.getDate() + 1);
+      break;
+    case 'weekly':
+      date.setDate(date.getDate() + 7);
+      break;
+    case 'bi-weekly':
+      date.setDate(date.getDate() + 14);
+      break;
+    case 'monthly':
+      date.setMonth(date.getMonth() + 1);
+      break;
+    case 'quarterly':
+      date.setMonth(date.getMonth() + 3);
+      break;
+    case 'yearly':
+      date.setFullYear(date.getFullYear() + 1);
+      break;
+    default:
+      return null;
+  }
+  
+  return toDateKey(date);
+}
+
+function expandRecurringTransactions(startDate, endDate) {
+  const expanded = [];
+  const startKey = toDateKey(startDate);
+  const endKey = toDateKey(endDate);
+  
+  for (const txn of transactions) {
+    // Add the original transaction if it's in range
+    if (txn.date >= startKey && txn.date <= endKey) {
+      expanded.push(txn);
+    }
+    
+    // If it's recurring, generate instances
+    if (txn.recurrence && txn.recurrence !== 'one-time') {
+      let currentDate = txn.date;
+      
+      // Generate recurring instances
+      while (true) {
+        const nextDate = getNextRecurrenceDate(currentDate, txn.recurrence);
+        if (!nextDate || nextDate > endKey) break;
+        
+        if (nextDate >= startKey) {
+          expanded.push({
+            ...txn,
+            id: `${txn.id}-recur-${nextDate}`,
+            date: nextDate,
+            isRecurring: true,
+            originalId: txn.id,
+          });
+        }
+        
+        currentDate = nextDate;
+      }
+    }
+  }
+  
+  return expanded;
+}
+
 function getDailyTotalsMap() {
   const totals = new Map();
-  for (const item of transactions) {
+  
+  // Get the current month's start and end dates for expansion
+  const monthStart = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1);
+  const monthEnd = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0);
+  
+  // Expand one year before and one year after to capture recurring transactions
+  const expandStart = new Date(monthStart);
+  expandStart.setFullYear(expandStart.getFullYear() - 1);
+  const expandEnd = new Date(monthEnd);
+  expandEnd.setFullYear(expandEnd.getFullYear() + 1);
+  
+  const allTransactions = expandRecurringTransactions(expandStart, expandEnd);
+  
+  for (const item of allTransactions) {
     totals.set(item.date, (totals.get(item.date) || 0) + item.amount);
   }
   return totals;
 }
 
 function getBalanceBefore(dateKey) {
-  return transactions
+  // Expand transactions from way before to the target date
+  const targetDate = new Date(dateKey + 'T00:00:00');
+  const expandStart = new Date(targetDate);
+  expandStart.setFullYear(expandStart.getFullYear() - 10);
+  
+  const allTransactions = expandRecurringTransactions(expandStart, targetDate);
+  
+  return allTransactions
     .filter((item) => item.date < dateKey)
     .reduce((sum, item) => sum + item.amount, 0);
 }
@@ -634,13 +767,13 @@ function renderCalendar() {
     if (dayAmount > 0) dailyTotal.classList.add("positive");
     if (dayAmount < 0) dailyTotal.classList.add("negative");
 
-    const runningTotal = document.createElement("div");
-    runningTotal.className = "running-total";
-    runningTotal.textContent = `Running: ${formatCurrency(isCurrentMonth ? runningBalance : getBalanceBefore(dateKey) + dayAmount)}`;
-    if ((isCurrentMonth ? runningBalance : getBalanceBefore(dateKey) + dayAmount) > 0) runningTotal.classList.add("positive");
-    if ((isCurrentMonth ? runningBalance : getBalanceBefore(dateKey) + dayAmount) < 0) runningTotal.classList.add("negative");
+    const balanceTotal = document.createElement("div");
+    balanceTotal.className = "balance-total";
+    balanceTotal.textContent = `Balance: ${formatCurrency(isCurrentMonth ? runningBalance : getBalanceBefore(dateKey) + dayAmount)}`;
+    if ((isCurrentMonth ? runningBalance : getBalanceBefore(dateKey) + dayAmount) > 0) balanceTotal.classList.add("positive");
+    if ((isCurrentMonth ? runningBalance : getBalanceBefore(dateKey) + dayAmount) < 0) balanceTotal.classList.add("negative");
 
-    day.append(dayNum, dailyTotal, runningTotal);
+    day.append(dayNum, dailyTotal, balanceTotal);
     calendarGrid.appendChild(day);
   }
 
@@ -654,26 +787,52 @@ function renderCalendar() {
 
 function renderTransactions() {
   transactionList.innerHTML = "";
+  
+  if (selectedDateKey) {
+    transactionListTitle.textContent = `Transactions - ${selectedDateKey}`;
+  } else {
+    transactionListTitle.textContent = "Transactions";
+  }
 
-  const monthStart = toDateKey(new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1));
-  const monthEnd = toDateKey(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0));
-  const monthItems = transactions.filter((item) => item.date >= monthStart && item.date <= monthEnd);
+  let dayItems = [];
+  
+  if (selectedDateKey) {
+    // Get expanded transactions for a range around the selected date
+    const selectedDate = new Date(selectedDateKey + 'T00:00:00');
+    const expandStart = new Date(selectedDate);
+    expandStart.setFullYear(expandStart.getFullYear() - 1);
+    const expandEnd = new Date(selectedDate);
+    expandEnd.setFullYear(expandEnd.getFullYear() + 1);
+    
+    const allTransactions = expandRecurringTransactions(expandStart, expandEnd);
+    dayItems = allTransactions.filter((item) => item.date === selectedDateKey);
+  }
 
-  if (!monthItems.length) {
+  if (!dayItems.length) {
     const empty = document.createElement("li");
-    empty.textContent = "No transactions for this month yet.";
+    empty.textContent = selectedDateKey 
+      ? `No transactions for ${selectedDateKey}.`
+      : "No transactions for this month yet.";
     transactionList.appendChild(empty);
     return;
   }
 
-  for (const item of monthItems) {
+  for (const item of dayItems) {
     const row = document.createElement("li");
 
     const date = document.createElement("span");
     date.textContent = item.date;
 
     const description = document.createElement("span");
-    description.textContent = item.description;
+    description.textContent = item.description + (item.isRecurring ? " (recurring)" : "");
+
+    const vendor = document.createElement("span");
+    vendor.textContent = item.vendor || "—";
+    vendor.className = "vendor";
+
+    const notes = document.createElement("span");
+    notes.textContent = item.notes || "—";
+    notes.className = "notes";
 
     const amount = document.createElement("strong");
     amount.textContent = formatCurrency(item.amount);
@@ -684,11 +843,13 @@ function renderTransactions() {
     removeButton.className = "remove-btn";
     removeButton.textContent = "Remove";
     removeButton.addEventListener("click", () => {
-      const remainingTransactions = transactions.filter((tx) => tx.id !== item.id);
+      // If it's a recurring instance, remove the original transaction
+      const idToRemove = item.isRecurring ? item.originalId : item.id;
+      const remainingTransactions = transactions.filter((tx) => tx.id !== idToRemove);
       commitTransactions(remainingTransactions);
     });
 
-    row.append(date, description, amount, removeButton);
+    row.append(date, description, vendor, notes, amount, removeButton);
     transactionList.appendChild(row);
   }
 }

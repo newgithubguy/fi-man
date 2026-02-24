@@ -10,7 +10,7 @@
   <main class="app">
     <header class="topbar">
       <h1>Finance Calendar</h1>
-      <p class="subtitle">Track daily totals with a running balance</p>
+      <p class="subtitle">Track daily totals with a balance</p>
     </header>
 
     <section class="controls card">
@@ -57,9 +57,32 @@
           <span id="descriptionHint" class="field-hint" aria-live="polite"></span>
         </label>
         <label>
+          Vendor
+          <input id="vendorInput" type="text" maxlength="60" placeholder="Walmart, Employer, Landlord..." />
+          <span class="field-hint"></span>
+        </label>
+        <label>
           Amount
           <input id="amountInput" type="number" step="0.01" placeholder="Use negative for expenses" required />
           <span id="amountHint" class="field-hint" aria-live="polite"></span>
+        </label>
+        <label>
+          Recurrence
+          <select id="recurrenceInput">
+            <option value="one-time" selected>One-time</option>
+            <option value="daily">Daily</option>
+            <option value="weekly">Weekly</option>
+            <option value="bi-weekly">Bi-weekly</option>
+            <option value="monthly">Monthly</option>
+            <option value="quarterly">Quarterly</option>
+            <option value="yearly">Yearly</option>
+          </select>
+          <span class="field-hint"></span>
+        </label>
+        <label class="notes-field">
+          Notes
+          <textarea id="notesInput" maxlength="200" placeholder="Optional notes or memo..."></textarea>
+          <span class="field-hint"></span>
         </label>
         <button type="submit">Add</button>
       </form>
@@ -67,7 +90,7 @@
 
     <section class="card">
       <div class="list-header">
-        <h3>Transactions</h3>
+        <h3 id="transactionListTitle">Transactions</h3>
         <div class="list-actions">
           <button id="exportCsv" type="button">Export CSV</button>
           <select id="importMode" aria-label="Import mode">
