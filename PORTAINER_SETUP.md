@@ -25,16 +25,23 @@ services:
       dockerfile: Dockerfile
     container_name: finance-calendar
     ports:
-      - "8080:80"
+      - "8080:3000"
+    volumes:
+      - finance-calendar-data:/data
     environment:
       - TZ=UTC
+      - NODE_ENV=production
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:80/index.html"]
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3000/"]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 10s
+
+volumes:
+  finance-calendar-data:
+    driver: local
 ```
 
 5. Click Deploy the stack
@@ -67,5 +74,5 @@ After rebuilding, hard refresh your browser:
 ## Troubleshooting
 
 - Check container logs in Portainer
-- Verify ports map to 8080 -> 80
+- Verify ports map to 8080 -> 3000
 - If updates do not appear, rebuild with --no-cache
