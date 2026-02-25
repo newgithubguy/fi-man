@@ -76,6 +76,10 @@ const transferAccountLabel = document.getElementById("transferAccountLabel");
 const editIsTransferInput = document.getElementById("editIsTransferInput");
 const editTransferAccountInput = document.getElementById("editTransferAccountInput");
 const editTransferAccountLabel = document.getElementById("editTransferAccountLabel");
+const calculatorDisplay = document.getElementById("calculatorDisplay");
+const calculatorKeys = document.getElementById("calculatorKeys");
+const calculatorToggle = document.getElementById("calculatorToggle");
+const calculatorBody = document.getElementById("calculatorBody");
 
 // Account management
 let accounts = [];
@@ -123,6 +127,100 @@ if (editIsTransferInput) {
       editTransferAccountLabel.classList.remove("hidden");
     } else {
       editTransferAccountLabel.classList.add("hidden");
+    }
+  });
+}
+
+if (calculatorToggle && calculatorBody) {
+  calculatorToggle.addEventListener("click", () => {
+    const isHidden = calculatorBody.classList.toggle("hidden");
+    calculatorToggle.setAttribute("aria-expanded", (!isHidden).toString());
+  });
+}
+
+if (calculatorKeys && calculatorDisplay) {
+  let calculatorExpression = calculatorDisplay.value || "0";
+
+  const updateCalculatorDisplay = (value) => {
+    calculatorDisplay.value = value;
+  };
+
+  const sanitizeExpression = (value) => {
+    if (!/^[0-9+\-*/().\s]+$/.test(value)) {
+      return null;
+    }
+    return value.replace(/\s+/g, "");
+  };
+
+  const evaluateExpression = (value) => {
+    const sanitized = sanitizeExpression(value);
+    if (sanitized === null || sanitized.length === 0) {
+      return "Error";
+    }
+    try {
+      const result = Function(`"use strict"; return (${sanitized});`)();
+      if (!Number.isFinite(result)) {
+        return "Error";
+      }
+      return String(result);
+    } catch {
+      return "Error";
+    }
+  };
+
+  const appendValue = (value) => {
+    if (calculatorExpression === "0" && /[0-9.]/.test(value)) {
+      calculatorExpression = value === "." ? "0." : value;
+    } else {
+      calculatorExpression += value;
+    }
+    updateCalculatorDisplay(calculatorExpression);
+  };
+
+  const clearExpression = () => {
+    calculatorExpression = "0";
+    updateCalculatorDisplay(calculatorExpression);
+  };
+
+  const backspace = () => {
+    if (calculatorExpression.length <= 1) {
+      calculatorExpression = "0";
+    } else {
+      calculatorExpression = calculatorExpression.slice(0, -1);
+    }
+    updateCalculatorDisplay(calculatorExpression);
+  };
+
+  const handleEquals = () => {
+    const result = evaluateExpression(calculatorExpression);
+    calculatorExpression = result === "Error" ? "0" : result;
+    updateCalculatorDisplay(result);
+  };
+
+  calculatorKeys.addEventListener("click", (event) => {
+    const target = event.target;
+    if (!(target instanceof HTMLElement)) return;
+
+    const action = target.getAttribute("data-action");
+    const value = target.getAttribute("data-value");
+
+    if (action === "clear") {
+      clearExpression();
+      return;
+    }
+
+    if (action === "backspace") {
+      backspace();
+      return;
+    }
+
+    if (action === "equals") {
+      handleEquals();
+      return;
+    }
+
+    if (value) {
+      appendValue(value);
     }
   });
 }
@@ -581,6 +679,11 @@ function saveAccounts() {
 }
 
 function saveActiveAccountId() {
+  // Just mark dirty, actual save happens in persistChanges()
+  markDirty();
+}
+
+function persistTransactions() {
   // Just mark dirty, actual save happens in persistChanges()
   markDirty();
 }
