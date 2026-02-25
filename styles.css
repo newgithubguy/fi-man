@@ -74,9 +74,8 @@ body {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  flex: 0 1 auto;
+  flex: 1;
   overflow-y: auto;
-  max-height: calc(100vh - 300px);
 }
 
 .account-item {
@@ -736,13 +735,12 @@ body {
 }
 
 .calculator {
-  margin-top: auto;
+  margin-top: 12px;
   width: 100%;
   background: var(--card);
   border: 1px solid var(--border);
   border-radius: 12px;
   padding: 8px;
-  flex-shrink: 0;
 }
 
 .calculator-header {
