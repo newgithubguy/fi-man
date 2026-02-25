@@ -66,6 +66,16 @@ function initializeDatabase() {
         value TEXT
       )
     `);
+
+    // Create entry histories table
+    db.run(`
+      CREATE TABLE IF NOT EXISTS entry_histories (
+        key TEXT PRIMARY KEY,
+        account_id TEXT,
+        entries TEXT,
+        FOREIGN KEY (account_id) REFERENCES accounts(id)
+      )
+    `);
   });
 }
 
@@ -234,6 +244,52 @@ app.post('/api/active-account', async (req, res) => {
   } catch (error) {
     console.error('Error setting active account:', error);
     res.status(500).json({ error: 'Failed to set active account' });
+  }
+});
+
+// Get entry histories
+app.get('/api/entry-histories/:accountId', async (req, res) => {
+  try {
+    const { accountId } = req.params;
+    const payeeResult = await dbGet(
+      'SELECT entries FROM entry_histories WHERE key = ? AND account_id = ?',
+      [`payee-${accountId}`, accountId]
+    );
+    const descriptionResult = await dbGet(
+      'SELECT entries FROM entry_histories WHERE key = ? AND account_id = ?',
+      [`description-${accountId}`, accountId]
+    );
+    
+    res.json({
+      payees: payeeResult ? JSON.parse(payeeResult.entries) : [],
+      descriptions: descriptionResult ? JSON.parse(descriptionResult.entries) : []
+    });
+  } catch (error) {
+    console.error('Error fetching entry histories:', error);
+    res.status(500).json({ error: 'Failed to fetch entry histories' });
+  }
+});
+
+// Save entry histories
+app.post('/api/entry-histories/:accountId', async (req, res) => {
+  try {
+    const { accountId } = req.params;
+    const { payees, descriptions } = req.body;
+    
+    await dbRun(
+      'INSERT OR REPLACE INTO entry_histories (key, account_id, entries) VALUES (?, ?, ?)',
+      [`payee-${accountId}`, accountId, JSON.stringify(payees || [])]
+    );
+    
+    await dbRun(
+      'INSERT OR REPLACE INTO entry_histories (key, account_id, entries) VALUES (?, ?, ?)',
+      [`description-${accountId}`, accountId, JSON.stringify(descriptions || [])]
+    );
+    
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Error saving entry histories:', error);
+    res.status(500).json({ error: 'Failed to save entry histories' });
   }
 });
 

@@ -81,6 +81,9 @@ const editTransferAccountLabel = document.getElementById("editTransferAccountLab
 let accounts = [];
 let activeAccountId = null;
 let transactions = [];
+let payeeHistory = [];
+let descriptionHistory = [];
+const HISTORY_MAX_ITEMS = 100;
 
 // Initialize async
 let currentMonth = new Date();
@@ -438,6 +441,11 @@ transactionForm.addEventListener("submit", (event) => {
     }
   }
 
+  // Track payee and description in history
+  if (payee) payeeHistory = addToHistory(payee, payeeHistory);
+  if (description) descriptionHistory = addToHistory(description, descriptionHistory);
+  saveEntryHistories();
+
   commitTransactions(nextTransactions);
   transactionForm.reset();
   recurrenceInput.value = "one-time";
@@ -577,10 +585,115 @@ function saveActiveAccountId() {
   markDirty();
 }
 
-function persistTransactions() {
-  // Just mark dirty, actual save happens in persistChanges()
-  markDirty();
+async function loadEntryHistories() {
+  try {
+    if (!activeAccountId) return;
+    const response = await fetch(`${API_BASE_URL}/entry-histories/${activeAccountId}`);
+    if (!response.ok) throw new Error('Failed to load entry histories');
+    const data = await response.json();
+    payeeHistory = data.payees || [];
+    descriptionHistory = data.descriptions || [];
+  } catch (error) {
+    console.error('Error loading entry histories:', error);
+    payeeHistory = [];
+    descriptionHistory = [];
+  }
 }
+
+async function saveEntryHistories() {
+  try {
+    if (!activeAccountId) return;
+    const response = await fetch(`${API_BASE_URL}/entry-histories/${activeAccountId}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ payees: payeeHistory, descriptions: descriptionHistory })
+    });
+    if (!response.ok) throw new Error('Failed to save entry histories');
+  } catch (error) {
+    console.error('Error saving entry histories:', error);
+  }
+}
+
+function addToHistory(value, historyArray, maxItems = HISTORY_MAX_ITEMS) {
+  if (!value || !value.trim()) return historyArray;
+  const trimmed = value.trim();
+  // Remove if already exists, then add to front
+  const filtered = historyArray.filter(item => item !== trimmed);
+  return [trimmed, ...filtered].slice(0, maxItems);
+}
+
+function renderSuggestionsForInput(inputElement, historyArray) {
+  const dataListId = inputElement.getAttribute('list');
+  if (!dataListId) return;
+  
+  const dataList = document.getElementById(dataListId);
+  if (!dataList) return;
+  
+  const value = inputElement.value.trim().toLowerCase();
+  const filtered = historyArray.filter(item => 
+    !value || item.toLowerCase().includes(value)
+  ).slice(0, 10);
+  
+  dataList.innerHTML = filtered
+    .map(item => `<option value="${item}"></option>`)
+    .join('');
+}
+
+// Setup input history and suggestions
+if (payeeInput) {
+  // Create datalist if it doesn't exist
+  if (!document.getElementById('payeeSuggestions')) {
+    const dataList = document.createElement('datalist');
+    dataList.id = 'payeeSuggestions';
+    document.body.appendChild(dataList);
+    payeeInput.setAttribute('list', 'payeeSuggestions');
+  }
+  
+  payeeInput.addEventListener('input', () => {
+    renderSuggestionsForInput(payeeInput, payeeHistory);
+  });
+}
+
+if (descriptionInput) {
+  // Create datalist if it doesn't exist
+  if (!document.getElementById('descriptionSuggestions')) {
+    const dataList = document.createElement('datalist');
+    dataList.id = 'descriptionSuggestions';
+    document.body.appendChild(dataList);
+    descriptionInput.setAttribute('list', 'descriptionSuggestions');
+  }
+  
+  descriptionInput.addEventListener('input', () => {
+    renderSuggestionsForInput(descriptionInput, descriptionHistory);
+  });
+}
+
+if (editPayeeInput) {
+  if (!document.getElementById('editPayeeSuggestions')) {
+    const dataList = document.createElement('datalist');
+    dataList.id = 'editPayeeSuggestions';
+    document.body.appendChild(dataList);
+    editPayeeInput.setAttribute('list', 'editPayeeSuggestions');
+  }
+  
+  editPayeeInput.addEventListener('input', () => {
+    renderSuggestionsForInput(editPayeeInput, payeeHistory);
+  });
+}
+
+if (editDescriptionInput) {
+  if (!document.getElementById('editDescriptionSuggestions')) {
+    const dataList = document.createElement('datalist');
+    dataList.id = 'editDescriptionSuggestions';
+    document.body.appendChild(dataList);
+    editDescriptionInput.setAttribute('list', 'editDescriptionSuggestions');
+  }
+  
+  editDescriptionInput.addEventListener('input', () => {
+    renderSuggestionsForInput(editDescriptionInput, descriptionHistory);
+  });
+}
+
 
 // Dirty flag for debounced persistence
 let isDirty = false;
@@ -1638,6 +1751,11 @@ editTransactionForm.addEventListener("submit", (event) => {
   txn.recurrence = editRecurrenceInput.value;
   txn.notes = editNotesInput.value.trim();
   
+  // Track payee and description in history
+  if (txn.payee) payeeHistory = addToHistory(txn.payee, payeeHistory);
+  if (txn.description) descriptionHistory = addToHistory(txn.description, descriptionHistory);
+  saveEntryHistories();
+  
   // Update linked transaction if it exists
   if (txn.linkedTransactionId && txn.linkedAccountId) {
     updateLinkedTransaction(txn);
@@ -1690,8 +1808,9 @@ async function initialize() {
       await saveActiveAccountIdToAPI();
     }
     
-    // Load transactions for active account
+    // Load transactions and entry histories for active account
     transactions = loadTransactions();
+    await loadEntryHistories();
     
     // Initialize UI
     if (dateInput) dateInput.value = selectedDateKey;
