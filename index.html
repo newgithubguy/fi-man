@@ -13,6 +13,41 @@
       <button id="addAccountBtn" type="button" class="add-account-btn" title="Add new account">+</button>
     </div>
     <ul id="accountsList" class="accounts-list"></ul>
+    <section class="calculator" aria-label="Calculator">
+      <div class="calculator-header">
+        <h3>Calculator</h3>
+        <button id="calculatorToggle" type="button" class="calculator-toggle" aria-expanded="true" aria-controls="calculatorBody">−</button>
+      </div>
+      <div id="calculatorBody" class="calculator-body">
+        <input id="calculatorDisplay" type="text" value="0" aria-label="Calculator display" readonly />
+        <div id="calculatorKeys" class="calculator-keys" role="group" aria-label="Calculator buttons">
+          <button type="button" data-action="clear">C</button>
+          <button type="button" data-action="backspace">⌫</button>
+          <button type="button" data-value="(">(</button>
+          <button type="button" data-value=")">)</button>
+
+          <button type="button" data-value="7">7</button>
+          <button type="button" data-value="8">8</button>
+          <button type="button" data-value="9">9</button>
+          <button type="button" data-value="/">÷</button>
+
+          <button type="button" data-value="4">4</button>
+          <button type="button" data-value="5">5</button>
+          <button type="button" data-value="6">6</button>
+          <button type="button" data-value="*">×</button>
+
+          <button type="button" data-value="1">1</button>
+          <button type="button" data-value="2">2</button>
+          <button type="button" data-value="3">3</button>
+          <button type="button" data-value="-">−</button>
+
+          <button type="button" data-value="0">0</button>
+          <button type="button" data-value=".">.</button>
+          <button type="button" data-action="equals">=</button>
+          <button type="button" data-value="+">+</button>
+        </div>
+      </div>
+    </section>
   </aside>
 
   <main class="app">

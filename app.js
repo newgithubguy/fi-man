@@ -162,6 +162,10 @@ const transferAccountLabel = document.getElementById("transferAccountLabel");
 const editIsTransferInput = document.getElementById("editIsTransferInput");
 const editTransferAccountInput = document.getElementById("editTransferAccountInput");
 const editTransferAccountLabel = document.getElementById("editTransferAccountLabel");
+const calculatorDisplay = document.getElementById("calculatorDisplay");
+const calculatorKeys = document.getElementById("calculatorKeys");
+const calculatorToggle = document.getElementById("calculatorToggle");
+const calculatorBody = document.getElementById("calculatorBody");
 
 // Account management
 let accounts = loadAccounts();
@@ -193,6 +197,75 @@ let selectedDateKey = toDateKey(new Date());
 let editingTransactionId = null;
 let payeeHistory = loadEntryHistory(PAYEE_HISTORY_KEY);
 let descriptionHistory = loadEntryHistory(DESCRIPTION_HISTORY_KEY);
+let calculatorExpression = "";
+
+function updateCalculatorDisplay(value) {
+  if (!calculatorDisplay) {
+    return;
+  }
+
+  calculatorDisplay.value = value || "0";
+}
+
+function evaluateCalculatorExpression(expression) {
+  const normalized = expression.replace(/[×x]/g, "*").replace(/[÷]/g, "/").trim();
+  if (!normalized || !/^[0-9+\-*/().\s]+$/.test(normalized)) {
+    return null;
+  }
+
+  try {
+    const result = Function(`"use strict"; return (${normalized});`)();
+    if (!Number.isFinite(result)) {
+      return null;
+    }
+
+    return String(Number(result.toFixed(10)));
+  } catch {
+    return null;
+  }
+}
+
+function handleCalculatorInput({ value, action }) {
+  if (!calculatorDisplay) {
+    return;
+  }
+
+  if (action === "clear") {
+    calculatorExpression = "";
+    updateCalculatorDisplay("0");
+    return;
+  }
+
+  if (action === "backspace") {
+    calculatorExpression = calculatorExpression.slice(0, -1);
+    updateCalculatorDisplay(calculatorExpression || "0");
+    return;
+  }
+
+  if (action === "equals") {
+    const evaluated = evaluateCalculatorExpression(calculatorExpression);
+    if (evaluated === null) {
+      calculatorExpression = "";
+      updateCalculatorDisplay("Error");
+      return;
+    }
+
+    calculatorExpression = evaluated;
+    updateCalculatorDisplay(calculatorExpression);
+    return;
+  }
+
+  if (!value || !/^[0-9+\-*/().]$/.test(value)) {
+    return;
+  }
+
+  if (calculatorDisplay.value === "Error") {
+    calculatorExpression = "";
+  }
+
+  calculatorExpression += value;
+  updateCalculatorDisplay(calculatorExpression);
+}
 
 function initializeEntryHistories() {
   const accountPayees = collectAccountFieldHistory("payee");
@@ -271,6 +344,28 @@ if (editIsTransferInput) {
     } else {
       editTransferAccountLabel.classList.add("hidden");
     }
+  });
+}
+
+if (calculatorKeys) {
+  calculatorKeys.addEventListener("click", (event) => {
+    const button = event.target.closest("button");
+    if (!button) {
+      return;
+    }
+
+    handleCalculatorInput({
+      value: button.dataset.value,
+      action: button.dataset.action,
+    });
+  });
+}
+
+if (calculatorToggle && calculatorBody) {
+  calculatorToggle.addEventListener("click", () => {
+    const isHidden = calculatorBody.classList.toggle("hidden");
+    calculatorToggle.textContent = isHidden ? "+" : "−";
+    calculatorToggle.setAttribute("aria-expanded", String(!isHidden));
   });
 }
 
@@ -560,6 +655,7 @@ transactionForm.addEventListener("submit", (event) => {
     notes,
     amount,
     recurrence,
+    recurrenceEndDate: null,
     linkedTransactionId,
     linkedAccountId: isTransfer ? transferToAccountId : null,
   };
@@ -578,6 +674,7 @@ transactionForm.addEventListener("submit", (event) => {
         notes,
         amount: -amount, // Opposite amount
         recurrence,
+        recurrenceEndDate: null,
         linkedTransactionId: newTransactionId,
         linkedAccountId: activeAccountId,
       };
@@ -624,6 +721,7 @@ function loadTransactions() {
         notes: entry.notes || '',
         amount: Number(entry.amount),
         recurrence: entry.recurrence || 'one-time',
+        recurrenceEndDate: entry.recurrenceEndDate || null,
         linkedTransactionId: entry.linkedTransactionId || null,
         linkedAccountId: entry.linkedAccountId || null,
       }))
@@ -1066,14 +1164,26 @@ function getNextRecurrenceDate(dateStr, recurrence) {
   return toDateKey(date);
 }
 
+function getPreviousDateKey(dateStr) {
+  const date = new Date(dateStr + 'T00:00:00');
+  date.setDate(date.getDate() - 1);
+  return toDateKey(date);
+}
+
 function expandRecurringTransactions(startDate, endDate) {
   const expanded = [];
   const startKey = toDateKey(startDate);
   const endKey = toDateKey(endDate);
   
   for (const txn of transactions) {
+    const recurrenceEndDate = txn.recurrenceEndDate || null;
+
     // Add the original transaction if it's in range
-    if (txn.date >= startKey && txn.date <= endKey) {
+    if (
+      txn.date >= startKey &&
+      txn.date <= endKey &&
+      (!recurrenceEndDate || txn.date <= recurrenceEndDate)
+    ) {
       expanded.push(txn);
     }
     
@@ -1085,6 +1195,7 @@ function expandRecurringTransactions(startDate, endDate) {
       while (true) {
         const nextDate = getNextRecurrenceDate(currentDate, txn.recurrence);
         if (!nextDate || nextDate > endKey) break;
+        if (recurrenceEndDate && nextDate > recurrenceEndDate) break;
         
         if (nextDate >= startKey) {
           expanded.push({
@@ -1306,6 +1417,36 @@ function renderTransactions() {
     removeButton.textContent = "Remove";
     removeButton.addEventListener("click", () => {
       const txnToDelete = transactions.find(tx => tx.id === idToUse);
+
+      if (txnToDelete && item.isRecurring && txnToDelete.recurrence && txnToDelete.recurrence !== 'one-time') {
+        const cutoffDate = getPreviousDateKey(item.date);
+        const nextTransactions = [...transactions];
+        const txnIndex = nextTransactions.findIndex(tx => tx.id === idToUse);
+
+        if (txnIndex === -1) {
+          return;
+        }
+
+        if (txnToDelete.date > cutoffDate) {
+          nextTransactions.splice(txnIndex, 1);
+        } else {
+          nextTransactions[txnIndex] = {
+            ...txnToDelete,
+            recurrenceEndDate: cutoffDate,
+          };
+        }
+
+        if (txnToDelete.linkedTransactionId && txnToDelete.linkedAccountId) {
+          truncateOrDeleteLinkedTransactionFromDate(
+            txnToDelete.linkedTransactionId,
+            txnToDelete.linkedAccountId,
+            item.date
+          );
+        }
+
+        commitTransactions(nextTransactions);
+        return;
+      }
       
       // Delete linked transaction if exists
       if (txnToDelete && txnToDelete.linkedTransactionId && txnToDelete.linkedAccountId) {
@@ -1447,6 +1588,32 @@ function deleteLinkedTransaction(linkedTransactionId, linkedAccountId) {
   }
 }
 
+function truncateOrDeleteLinkedTransactionFromDate(linkedTransactionId, linkedAccountId, fromDateKey) {
+  const linkedAccount = accounts.find(acc => acc.id === linkedAccountId);
+  if (!linkedAccount) {
+    return;
+  }
+
+  const linkedTransactions = linkedAccount.transactions || [];
+  const linkedTxn = linkedTransactions.find(t => t.id === linkedTransactionId);
+  if (!linkedTxn) {
+    return;
+  }
+
+  if (linkedTxn.recurrence && linkedTxn.recurrence !== 'one-time') {
+    const cutoffDate = getPreviousDateKey(fromDateKey);
+    if (linkedTxn.date > cutoffDate) {
+      linkedAccount.transactions = linkedTransactions.filter(t => t.id !== linkedTransactionId);
+    } else {
+      linkedTxn.recurrenceEndDate = cutoffDate;
+    }
+  } else {
+    linkedAccount.transactions = linkedTransactions.filter(t => t.id !== linkedTransactionId);
+  }
+
+  saveAccounts();
+}
+
 function updateLinkedTransaction(txn) {
   if (!txn.linkedTransactionId || !txn.linkedAccountId) return;
   
@@ -1462,6 +1629,7 @@ function updateLinkedTransaction(txn) {
       linkedTxn.notes = txn.notes;
       linkedTxn.amount = -txn.amount; // Keep opposite amount
       linkedTxn.recurrence = txn.recurrence;
+      linkedTxn.recurrenceEndDate = txn.recurrenceEndDate || null;
       saveAccounts();
     }
   }
@@ -1649,6 +1817,7 @@ editTransactionForm.addEventListener("submit", (event) => {
         notes: editNotesInput.value.trim(),
         amount: -Number(editAmountInput.value),
         recurrence: editRecurrenceInput.value,
+        recurrenceEndDate: null,
         linkedTransactionId: txn.id,
         linkedAccountId: activeAccountId,
       };
@@ -1676,6 +1845,7 @@ editTransactionForm.addEventListener("submit", (event) => {
         notes: editNotesInput.value.trim(),
         amount: -Number(editAmountInput.value),
         recurrence: editRecurrenceInput.value,
+        recurrenceEndDate: null,
         linkedTransactionId: txn.id,
         linkedAccountId: activeAccountId,
       };
@@ -1691,6 +1861,9 @@ editTransactionForm.addEventListener("submit", (event) => {
   txn.description = editDescriptionInput.value.trim();
   txn.amount = Number(editAmountInput.value);
   txn.recurrence = editRecurrenceInput.value;
+  if (txn.recurrence === 'one-time') {
+    txn.recurrenceEndDate = null;
+  }
   txn.notes = editNotesInput.value.trim();
 
   rememberFieldEntries({
