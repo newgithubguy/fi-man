@@ -28,8 +28,10 @@ body {
   background: var(--card);
   border-right: 2px solid var(--border);
   padding: 16px;
-  overflow-y: auto;
+  overflow: hidden;
   flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
 }
 
 .accounts-header {
@@ -72,6 +74,8 @@ body {
   display: flex;
   flex-direction: column;
   gap: 8px;
+  flex: 1;
+  overflow-y: auto;
 }
 
 .account-item {
@@ -190,16 +194,20 @@ body {
 .month-selector-group {
   display: flex;
   flex-direction: column;
-  align-items: center;
+  align-items: stretch;
   gap: 6px;
+  width: 160px;
 }
 
 .selector-label {
+  display: block;
   font-size: 0.85rem;
   font-weight: 600;
   color: var(--muted);
   text-transform: uppercase;
   letter-spacing: 0.5px;
+  width: 100%;
+  text-align: left;
 }
 
 .month-controls select {
@@ -209,7 +217,7 @@ body {
   padding: 8px 10px;
   cursor: pointer;
   font-size: 1rem;
-  min-width: 140px;
+  width: 100%;
 }
 
 .summary-row {
@@ -311,6 +319,43 @@ body {
   grid-template-columns: repeat(6, minmax(0, 1fr));
   gap: 10px;
   align-items: end;
+}
+
+.form-card {
+  padding: 12px;
+}
+
+.form-card h3 {
+  margin: 0 0 8px;
+}
+
+#transactionForm {
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: 8px;
+  align-items: start;
+}
+
+#transactionForm > label {
+  grid-column: span 2;
+}
+
+#transactionForm .notes-field {
+  grid-column: span 4;
+}
+
+#transactionForm textarea {
+  min-height: 44px;
+}
+
+#transactionForm .transfer-section {
+  grid-column: span 4;
+  padding: 8px;
+  gap: 8px;
+}
+
+#transactionForm button[type="submit"] {
+  grid-column: span 2;
+  align-self: end;
 }
 
 .transaction-form .notes-field {
@@ -689,6 +734,77 @@ body {
   border-left-color: var(--bad);
 }
 
+.calculator {
+  margin-top: 12px;
+  width: 100%;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 8px;
+}
+
+.calculator-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.calculator h3 {
+  margin: 0;
+  font-size: 0.88rem;
+}
+
+.calculator-toggle {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  min-height: 28px;
+  min-width: 28px;
+  padding: 2px 6px;
+  font: inherit;
+  background: #F8F5F0;
+  cursor: pointer;
+}
+
+.calculator-body.hidden {
+  display: none;
+}
+
+#calculatorDisplay {
+  width: 100%;
+  min-height: 32px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 6px 8px;
+  margin-bottom: 6px;
+  text-align: right;
+  font: inherit;
+  background: #F8F5F0;
+  font-size: 0.9rem;
+}
+
+.calculator-keys {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 4px;
+}
+
+.calculator-keys button {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  min-height: 28px;
+  padding: 4px;
+  font: inherit;
+  background: #F8F5F0;
+  cursor: pointer;
+  font-size: 0.85rem;
+}
+
+.calculator-keys button:hover {
+  border-color: var(--accent);
+}
+
 .notes {
   color: var(--muted);
   font-size: 0.85rem;
@@ -763,6 +879,13 @@ body {
     grid-template-columns: 1fr;
   }
 
+  #transactionForm > label,
+  #transactionForm .notes-field,
+  #transactionForm .transfer-section,
+  #transactionForm button[type="submit"] {
+    grid-column: 1;
+  }
+
   .summary-row {
     grid-template-columns: 1fr;
   }
@@ -793,5 +916,16 @@ body {
 
   .month-controls {
     flex-wrap: wrap;
+  }
+
+  .accounts-sidebar {
+    width: 100%;
+    border-right: none;
+    border-bottom: 2px solid var(--border);
+    max-height: 320px;
+  }
+
+  .accounts-list {
+    max-height: 170px;
   }
 }
