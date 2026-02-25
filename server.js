@@ -114,7 +114,17 @@ app.get('/api/accounts', async (req, res) => {
         return {
           id: account.id,
           name: account.name,
-          transactions
+          transactions: transactions.map((txn) => ({
+            id: txn.id,
+            date: txn.date,
+            payee: txn.payee,
+            description: txn.description,
+            notes: txn.notes,
+            amount: txn.amount,
+            recurrence: txn.recurrence,
+            linkedTransactionId: txn.linked_transaction_id || null,
+            linkedAccountId: txn.linked_account_id || null,
+          }))
         };
       })
     );
@@ -126,21 +136,45 @@ app.get('/api/accounts', async (req, res) => {
   }
 });
 
-// Create account
+// Create account or replace all accounts
 app.post('/api/accounts', async (req, res) => {
   try {
-    const { id, name, transactions } = req.body;
-    
-    await dbRun('INSERT OR REPLACE INTO accounts (id, name) VALUES (?, ?)', [id, name]);
-    
-    // Insert transactions
-    for (const txn of transactions || []) {
-      await dbRun(
-        `INSERT OR REPLACE INTO transactions 
-         (id, account_id, date, payee, description, notes, amount, recurrence, linked_transaction_id, linked_account_id)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [txn.id, id, txn.date, txn.payee, txn.description, txn.notes, txn.amount, txn.recurrence, txn.linkedTransactionId, txn.linkedAccountId]
-      );
+    const payload = req.body;
+    const accountsPayload = Array.isArray(payload) ? payload : [payload];
+
+    if (!accountsPayload.length) {
+      return res.json({ success: true });
+    }
+
+    await dbRun('DELETE FROM transactions');
+    await dbRun('DELETE FROM accounts');
+
+    for (const account of accountsPayload) {
+      if (!account || !account.id || !account.name) {
+        continue;
+      }
+
+      await dbRun('INSERT OR REPLACE INTO accounts (id, name) VALUES (?, ?)', [account.id, account.name]);
+
+      for (const txn of account.transactions || []) {
+        await dbRun(
+          `INSERT OR REPLACE INTO transactions 
+           (id, account_id, date, payee, description, notes, amount, recurrence, linked_transaction_id, linked_account_id)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          [
+            txn.id,
+            account.id,
+            txn.date,
+            txn.payee,
+            txn.description,
+            txn.notes,
+            txn.amount,
+            txn.recurrence,
+            txn.linkedTransactionId,
+            txn.linkedAccountId
+          ]
+        );
+      }
     }
     
     res.json({ success: true });
