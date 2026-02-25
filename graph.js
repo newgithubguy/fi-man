@@ -1,6 +1,4 @@
-const STORAGE_KEY = "finance-calendar-transactions";
-const ACCOUNTS_STORAGE_KEY = "finance-calendar-accounts";
-const ACTIVE_ACCOUNT_KEY = "finance-calendar-active-account";
+const API_BASE_URL = '/api';
 
 const timeRangeSelect = document.getElementById("timeRange");
 const yearSelect = document.getElementById("yearSelect");
@@ -8,36 +6,50 @@ const monthSelect = document.getElementById("monthSelect");
 const viewModeRadios = document.querySelectorAll('input[name="viewMode"]');
 const timeRangeControls = document.getElementById("timeRangeControls");
 const monthSelectorControls = document.getElementById("monthSelectorControls");
+const chartTypeSelect = document.getElementById("chartType");
 const totalIncomeDisplay = document.getElementById("totalIncome");
 const totalExpensesDisplay = document.getElementById("totalExpenses");
 const netAmountDisplay = document.getElementById("netAmount");
 
 let chart = null;
-let transactions = loadTransactions();
+let accounts = [];
+let activeAccountId = null;
+let transactions = [];
 let viewMode = "timeRange";
 
-function loadTransactions() {
+async function loadAccountsFromAPI() {
   try {
-    // Try to load from multi-account storage first
-    const rawAccounts = localStorage.getItem(ACCOUNTS_STORAGE_KEY);
-    if (rawAccounts) {
-      const accounts = JSON.parse(rawAccounts);
-      const activeAccountId = localStorage.getItem(ACTIVE_ACCOUNT_KEY);
-      
-      // Find the active account or use the first one
-      const activeAccount = accounts.find(acc => acc.id === activeAccountId) || accounts[0];
-      if (activeAccount && activeAccount.transactions) {
-        return Array.isArray(activeAccount.transactions) ? activeAccount.transactions : [];
-      }
+    const response = await fetch(`${API_BASE_URL}/accounts`);
+    if (!response.ok) {
+      throw new Error('Failed to load accounts');
     }
-    
-    // Fallback to old single-account storage
-    const stored = localStorage.getItem(STORAGE_KEY);
-    return stored ? JSON.parse(stored) : [];
-  } catch (e) {
-    console.error("Error loading transactions:", e);
+    return await response.json();
+  } catch (error) {
+    console.error('Error loading accounts:', error);
     return [];
   }
+}
+
+async function loadActiveAccountIdFromAPI() {
+  try {
+    const response = await fetch(`${API_BASE_URL}/active-account`);
+    if (!response.ok) {
+      throw new Error('Failed to load active account');
+    }
+    const data = await response.json();
+    return data.activeAccountId;
+  } catch (error) {
+    console.error('Error loading active account:', error);
+    return null;
+  }
+}
+
+function selectActiveAccountTransactions() {
+  const activeAccount = accounts.find(acc => acc.id === activeAccountId) || accounts[0];
+  if (!activeAccount || !Array.isArray(activeAccount.transactions)) {
+    return [];
+  }
+  return activeAccount.transactions;
 }
 
 function toDateKey(date) {
@@ -270,37 +282,49 @@ function updateChart() {
     chart.destroy();
   }
   
+  const chartType = chartTypeSelect?.value || 'line';
+
   // Create new chart
   const ctx = document.getElementById('incomeExpensesChart').getContext('2d');
-  chart = new Chart(ctx, {
-    type: 'line',
-    data: {
-      labels: chartData.labels,
-      datasets: [
+  const isPie = chartType === 'pie';
+  const datasets = isPie
+    ? [{
+        data: [chartData.totalIncome, chartData.totalExpenses],
+        backgroundColor: ['#10b981', '#ef4444'],
+        borderColor: ['#0f9f74', '#dc2626'],
+        borderWidth: 1,
+      }]
+    : [
         {
           label: 'Income',
           data: chartData.incomeData,
           borderColor: '#10b981',
-          backgroundColor: 'rgba(16, 185, 129, 0.1)',
+          backgroundColor: chartType === 'line' ? 'rgba(16, 185, 129, 0.1)' : 'rgba(16, 185, 129, 0.6)',
           borderWidth: 2,
           tension: 0.4,
-          fill: true,
+          fill: chartType === 'line',
         },
         {
           label: 'Expenses',
           data: chartData.expensesData,
           borderColor: '#ef4444',
-          backgroundColor: 'rgba(239, 68, 68, 0.1)',
+          backgroundColor: chartType === 'line' ? 'rgba(239, 68, 68, 0.1)' : 'rgba(239, 68, 68, 0.6)',
           borderWidth: 2,
           tension: 0.4,
-          fill: true,
+          fill: chartType === 'line',
         }
-      ]
+      ];
+
+  chart = new Chart(ctx, {
+    type: chartType,
+    data: {
+      labels: isPie ? ['Income', 'Expenses'] : chartData.labels,
+      datasets
     },
     options: {
       responsive: true,
       maintainAspectRatio: true,
-      interaction: {
+      interaction: isPie ? undefined : {
         mode: 'index',
         intersect: false,
       },
@@ -312,17 +336,14 @@ function updateChart() {
         tooltip: {
           callbacks: {
             label: function(context) {
-              let label = context.dataset.label || '';
-              if (label) {
-                label += ': ';
-              }
-              label += formatCurrency(context.parsed.y);
-              return label;
+              const label = context.dataset.label || context.label || '';
+              const value = isPie ? context.parsed : context.parsed.y;
+              return `${label}: ${formatCurrency(value)}`;
             }
           }
         }
       },
-      scales: {
+      scales: isPie ? undefined : {
         y: {
           beginAtZero: true,
           ticks: {
@@ -366,7 +387,22 @@ viewModeRadios.forEach(radio => {
 yearSelect.addEventListener('change', updateChart);
 monthSelect.addEventListener('change', updateChart);
 
+if (chartTypeSelect) {
+  chartTypeSelect.addEventListener('change', updateChart);
+}
+
 // Initialize year selector and render chart
-populateYearSelect();
-monthSelect.value = new Date().getMonth();
-updateChart();
+async function initialize() {
+  try {
+    accounts = await loadAccountsFromAPI();
+    activeAccountId = await loadActiveAccountIdFromAPI();
+    transactions = selectActiveAccountTransactions();
+    populateYearSelect();
+    monthSelect.value = new Date().getMonth();
+    updateChart();
+  } catch (error) {
+    console.error('Error initializing graph data:', error);
+  }
+}
+
+initialize();
