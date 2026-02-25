@@ -1,11 +1,19 @@
-FROM nginx:alpine
+FROM node:18-alpine
 
-# Copy application files to nginx web root
-COPY . /usr/share/nginx/html/
+WORKDIR /app
 
-# Copy custom nginx configuration
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+# Copy application files
+COPY package*.json ./
+COPY . .
 
-EXPOSE 80
+# Install dependencies
+RUN npm install
 
-CMD ["nginx", "-g", "daemon off;"]
+# Create data directory for SQLite database
+RUN mkdir -p /data
+
+EXPOSE 3000
+
+ENV NODE_ENV=production
+
+CMD ["npm", "start"]

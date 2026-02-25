@@ -1,6 +1,4 @@
-const STORAGE_KEY = "finance-calendar-transactions";
-const ACCOUNTS_STORAGE_KEY = "finance-calendar-accounts";
-const ACTIVE_ACCOUNT_KEY = "finance-calendar-active-account";
+const API_BASE_URL = '/api';
 const IMPORT_NO_VALID_ROWS_MESSAGE = "No valid transactions found in the CSV file.";
 const IMPORT_READ_ERROR_MESSAGE = "Could not import this CSV file.";
 const TOAST_DURATION_MS = 3000;
@@ -80,29 +78,11 @@ const editTransferAccountInput = document.getElementById("editTransferAccountInp
 const editTransferAccountLabel = document.getElementById("editTransferAccountLabel");
 
 // Account management
-let accounts = loadAccounts();
-let activeAccountId = loadActiveAccountId();
+let accounts = [];
+let activeAccountId = null;
+let transactions = [];
 
-// Initialize default account if none exists
-if (accounts.length === 0) {
-  const defaultAccount = {
-    id: generateUuid(),
-    name: "Main Account",
-    transactions: migrateOldTransactions()
-  };
-  accounts = [defaultAccount];
-  activeAccountId = defaultAccount.id;
-  saveAccounts();
-  saveActiveAccountId();
-}
-
-// Ensure active account is valid
-if (!accounts.find(acc => acc.id === activeAccountId)) {
-  activeAccountId = accounts[0]?.id || null;
-  saveActiveAccountId();
-}
-
-let transactions = loadTransactions();
+// Initialize async
 let currentMonth = new Date();
 currentMonth.setDate(1);
 let selectedDateKey = toDateKey(new Date());
@@ -502,45 +482,141 @@ function loadTransactions() {
   }
 }
 
-function migrateOldTransactions() {
-  // Migrate old transactions from single-account storage
+async function loadAccountsFromAPI() {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return [];
-    const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
+    const response = await fetch(`${API_BASE_URL}/accounts`);
+    if (!response.ok) {
+      throw new Error('Failed to load accounts');
+    }
+    return await response.json();
+  } catch (error) {
+    console.error('Error loading accounts:', error);
     return [];
   }
 }
 
-function loadAccounts() {
+async function saveAccountsToAPI() {
   try {
-    const raw = localStorage.getItem(ACCOUNTS_STORAGE_KEY);
-    const parsed = raw ? JSON.parse(raw) : [];
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    return [];
+    const response = await fetch(`${API_BASE_URL}/accounts`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(accounts)
+    });
+    if (!response.ok) {
+      throw new Error('Failed to save accounts');
+    }
+    return await response.json();
+  } catch (error) {
+    console.error('Error saving accounts:', error);
   }
 }
 
-function saveAccounts() {
-  localStorage.setItem(ACCOUNTS_STORAGE_KEY, JSON.stringify(accounts));
+async function loadActiveAccountIdFromAPI() {
+  try {
+    const response = await fetch(`${API_BASE_URL}/active-account`);
+    if (!response.ok) {
+      throw new Error('Failed to load active account');
+    }
+    const data = await response.json();
+    return data.activeAccountId;
+  } catch (error) {
+    console.error('Error loading active account:', error);
+    return null;
+  }
 }
 
-function loadActiveAccountId() {
-  return localStorage.getItem(ACTIVE_ACCOUNT_KEY);
+async function saveActiveAccountIdToAPI() {
+  try {
+    const response = await fetch(`${API_BASE_URL}/active-account`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ activeAccountId })
+    });
+    if (!response.ok) {
+      throw new Error('Failed to save active account');
+    }
+    return await response.json();
+  } catch (error) {
+    console.error('Error saving active account:', error);
+  }
 }
 
-function saveActiveAccountId() {
-  localStorage.setItem(ACTIVE_ACCOUNT_KEY, activeAccountId);
-}
-
-function persistTransactions() {
+async function persistTransactionsToAPI() {
   const activeAccount = accounts.find(acc => acc.id === activeAccountId);
   if (activeAccount) {
     activeAccount.transactions = transactions;
-    saveAccounts();
+    try {
+      const response = await fetch(`${API_BASE_URL}/transactions`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ accountId: activeAccountId, transactions })
+      });
+      if (!response.ok) {
+        throw new Error('Failed to save transactions');
+      }
+      await saveAccountsToAPI();
+    } catch (error) {
+      console.error('Error persisting transactions:', error);
+    }
+  }
+}
+
+// Legacy storage functions for backwards compatibility
+function migrateOldTransactions() {
+  return [];
+}
+
+// Synchronous wrapper functions that update in-memory state
+function saveAccounts() {
+  // Just mark dirty, actual save happens in persistChanges()
+  markDirty();
+}
+
+function saveActiveAccountId() {
+  // Just mark dirty, actual save happens in persistChanges()
+  markDirty();
+}
+
+function persistTransactions() {
+  // Just mark dirty, actual save happens in persistChanges()
+  markDirty();
+}
+
+// Dirty flag for debounced persistence
+let isDirty = false;
+let persistTimer = null;
+
+function markDirty() {
+  isDirty = true;
+  if (persistTimer) {
+    clearTimeout(persistTimer);
+  }
+  // Persist changes 500ms after last change
+  persistTimer = setTimeout(() => {
+    persistChanges();
+  }, 500);
+}
+
+async function persistChanges() {
+  if (!isDirty) return;
+  
+  try {
+    // Update active account transactions in memory
+    const activeAccount = accounts.find(acc => acc.id === activeAccountId);
+    if (activeAccount) {
+      activeAccount.transactions = transactions;
+    }
+    
+    // Save all data to API
+    await Promise.all([
+      saveAccountsToAPI(),
+      saveActiveAccountIdToAPI()
+    ]);
+    
+    isDirty = false;
+  } catch (error) {
+    console.error('Error persisting changes:', error);
+    // Will retry on next change
   }
 }
 
@@ -1587,9 +1663,47 @@ function focusEntryFieldAfterDatePick() {
   descriptionInput.focus();
 }
 
-(function initialize() {
-  if (dateInput) dateInput.value = selectedDateKey;
-  if (transferAccountInput) updateTransferAccountOptions(transferAccountInput, transferAccountLabel);
-  if (editTransferAccountInput) updateTransferAccountOptions(editTransferAccountInput, editTransferAccountLabel);
-  render();
-})();
+async function initialize() {
+  try {
+    // Load accounts from API
+    accounts = await loadAccountsFromAPI();
+    
+    // Load active account ID
+    activeAccountId = await loadActiveAccountIdFromAPI();
+    
+    // Initialize default account if none exists
+    if (accounts.length === 0) {
+      const defaultAccount = {
+        id: generateUuid(),
+        name: "Main Account",
+        transactions: []
+      };
+      accounts = [defaultAccount];
+      activeAccountId = defaultAccount.id;
+      await saveAccountsToAPI();
+      await saveActiveAccountIdToAPI();
+    }
+    
+    // Ensure active account is valid
+    if (!accounts.find(acc => acc.id === activeAccountId)) {
+      activeAccountId = accounts[0]?.id || null;
+      await saveActiveAccountIdToAPI();
+    }
+    
+    // Load transactions for active account
+    transactions = loadTransactions();
+    
+    // Initialize UI
+    if (dateInput) dateInput.value = selectedDateKey;
+    if (transferAccountInput) updateTransferAccountOptions(transferAccountInput, transferAccountLabel);
+    if (editTransferAccountInput) updateTransferAccountOptions(editTransferAccountInput, editTransferAccountLabel);
+    
+    render();
+  } catch (error) {
+    console.error('Error during initialization:', error);
+    showToast({ message: 'Failed to load data. Please refresh the page.', type: 'error' });
+  }
+}
+
+// Start initialization
+initialize();
