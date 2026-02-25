@@ -1,2 +1,12 @@
 # Prevent accidental nested copy of this repo
 fi-man/
+
+# OS files
+Thumbs.db
+.DS_Store
+
+# Editor/IDE temp files
+*.swp
+*.swo
+*~
+.vscode/
