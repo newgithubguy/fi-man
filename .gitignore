@@ -10,3 +10,9 @@ Thumbs.db
 *.swo
 *~
 .vscode/
+
+# Node tooling (future-proof)
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
