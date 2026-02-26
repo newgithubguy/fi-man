@@ -172,24 +172,22 @@ if (deletePreviousBtn) {
   deletePreviousBtn.addEventListener("click", () => {
     if (!pendingRecurringDelete) return;
     
-    const txnToDelete = pendingRecurringDelete;
+    const recurringItem = pendingRecurringDelete;
+    const originalTxn = transactions.find(tx => tx.id === recurringItem.originalId);
+    
+    if (!originalTxn) return;
     
     // Delete linked transaction if exists
-    if (txnToDelete.linkedTransactionId && txnToDelete.linkedAccountId) {
-      deleteLinkedTransaction(txnToDelete.linkedTransactionId, txnToDelete.linkedAccountId);
+    if (originalTxn.linkedTransactionId && originalTxn.linkedAccountId) {
+      deleteLinkedTransaction(originalTxn.linkedTransactionId, originalTxn.linkedAccountId);
     }
     
-    // Delete original and all instances up to and including this date
-    const remainingTransactions = transactions.filter((tx) => {
-      // Keep if it's not the original
-      if (tx.id === txnToDelete.originalId) return false;
-      // Keep if it's not an instance of this recurring transaction
-      if (tx.originalId !== txnToDelete.originalId) return true;
-      // Keep if it's after this occurrence's date
-      return tx.date > txnToDelete.date;
-    });
+    // Set recurrence end date to the day before this occurrence
+    const thisDate = new Date(recurringItem.date + 'T00:00:00');
+    thisDate.setDate(thisDate.getDate() - 1);
+    originalTxn.recurrenceEndDate = toDateKey(thisDate);
     
-    commitTransactions(remainingTransactions);
+    commitTransactions(transactions);
     closeDeleteRecurringModal();
   });
 }
@@ -198,16 +196,25 @@ if (deleteThisOnlyBtn) {
   deleteThisOnlyBtn.addEventListener("click", () => {
     if (!pendingRecurringDelete) return;
     
-    const txnToDelete = pendingRecurringDelete;
+    const recurringItem = pendingRecurringDelete;
+    const originalTxn = transactions.find(tx => tx.id === recurringItem.originalId);
+    
+    if (!originalTxn) return;
     
     // Delete linked transaction if exists
-    if (txnToDelete.linkedTransactionId && txnToDelete.linkedAccountId) {
-      deleteLinkedTransaction(txnToDelete.linkedTransactionId, txnToDelete.linkedAccountId);
+    if (originalTxn.linkedTransactionId && originalTxn.linkedAccountId) {
+      deleteLinkedTransaction(originalTxn.linkedTransactionId, originalTxn.linkedAccountId);
     }
     
-    // Delete only this specific occurrence
-    const remainingTransactions = transactions.filter((tx) => tx.id !== txnToDelete.id);
-    commitTransactions(remainingTransactions);
+    // Add this date to the excluded dates list
+    if (!originalTxn.excludedDates) {
+      originalTxn.excludedDates = [];
+    }
+    if (!originalTxn.excludedDates.includes(recurringItem.date)) {
+      originalTxn.excludedDates.push(recurringItem.date);
+    }
+    
+    commitTransactions(transactions);
     closeDeleteRecurringModal();
   });
 }
@@ -216,16 +223,22 @@ if (deleteFutureBtn) {
   deleteFutureBtn.addEventListener("click", () => {
     if (!pendingRecurringDelete) return;
     
-    const txnToDelete = pendingRecurringDelete;
+    const recurringItem = pendingRecurringDelete;
+    const originalTxn = transactions.find(tx => tx.id === recurringItem.originalId);
+    
+    if (!originalTxn) return;
     
     // Delete linked transaction if exists
-    if (txnToDelete.linkedTransactionId && txnToDelete.linkedAccountId) {
-      deleteLinkedTransaction(txnToDelete.linkedTransactionId, txnToDelete.linkedAccountId);
+    if (originalTxn.linkedTransactionId && originalTxn.linkedAccountId) {
+      deleteLinkedTransaction(originalTxn.linkedTransactionId, originalTxn.linkedAccountId);
     }
     
-    // Delete this and all future occurrences - remove the original recurring transaction
-    const remainingTransactions = transactions.filter((tx) => tx.id !== txnToDelete.originalId && tx.originalId !== txnToDelete.originalId);
-    commitTransactions(remainingTransactions);
+    // Set recurrence end date to the day before this occurrence
+    const thisDate = new Date(recurringItem.date + 'T00:00:00');
+    thisDate.setDate(thisDate.getDate() - 1);
+    originalTxn.recurrenceEndDate = toDateKey(thisDate);
+    
+    commitTransactions(transactions);
     closeDeleteRecurringModal();
   });
 }
@@ -1366,6 +1379,8 @@ function expandRecurringTransactions(startDate, endDate) {
     
     // If it's recurring, generate instances
     if (txn.recurrence && txn.recurrence !== 'one-time') {
+      const excludedDates = new Set(txn.excludedDates || []);
+      const recurrenceEndDate = txn.recurrenceEndDate;
       let currentDate = txn.date;
       
       // Generate recurring instances
@@ -1373,7 +1388,10 @@ function expandRecurringTransactions(startDate, endDate) {
         const nextDate = getNextRecurrenceDate(currentDate, txn.recurrence);
         if (!nextDate || nextDate > endKey) break;
         
-        if (nextDate >= startKey) {
+        // Stop if we've reached the recurrence end date
+        if (recurrenceEndDate && nextDate > recurrenceEndDate) break;
+        
+        if (nextDate >= startKey && !excludedDates.has(nextDate)) {
           expanded.push({
             ...txn,
             id: `${txn.id}-recur-${nextDate}`,
@@ -1596,10 +1614,11 @@ function renderTransactions() {
       
       if (!txnToDelete) return;
       
-      // Handle recurring transaction deletion
-      if (txnToDelete.isRecurring && txnToDelete.originalId) {
+      // Handle recurring transaction deletion - check the displayed item, not the original
+      if (item.isRecurring && item.originalId) {
         // This is a recurring instance - show modal with options
-        openDeleteRecurringModal(txnToDelete);
+        // Pass the item which has the date of this specific occurrence
+        openDeleteRecurringModal(item);
       } else {
         // Normal transaction or original recurring transaction - delete it
         if (txnToDelete.linkedTransactionId && txnToDelete.linkedAccountId) {

@@ -145,6 +145,8 @@ function expandRecurringTransactions(transactions, months = 12) {
         continue;
       }
 
+      const excludedDates = new Set(txn.excludedDates || []);
+      const recurrenceEndDate =txn.recurrenceEndDate ? new Date(`${txn.recurrenceEndDate}T00:00:00`) : null;
       let currentDate = new Date(startDate);
       let safetyCounter = 0;
 
@@ -176,14 +178,24 @@ function expandRecurringTransactions(transactions, months = 12) {
         if (Number.isNaN(nextDate.getTime())) break;
         if (nextDate <= currentDate) break;
         if (nextDate > endDate) break;
+        
+        // Stop if we've reached the recurrence end date
+        if (recurrenceEndDate && nextDate > recurrenceEndDate) break;
 
         currentDate = nextDate;
+        
+        const dateStr = currentDate.toISOString().split('T')[0];
+        
+        // Skip if this date is excluded
+        if (excludedDates.has(dateStr)) {
+          continue;
+        }
 
         // Create a new transaction instance
         const recurringInstance = {
           ...txn,
-          id: `${txn.id}-${currentDate.toISOString().split('T')[0]}`,
-          date: currentDate.toISOString().split('T')[0],
+          id: `${txn.id}-${dateStr}`,
+          date: dateStr,
           isRecurringInstance: true // Mark as generated instance
         };
 
