@@ -49,7 +49,9 @@ Open `index.html` directly in your browser for a basic offline experience (no pe
 - Click the **+** button in the left sidebar to create new accounts
 - Click an account name to switch between them
 - Each account has its own separate transaction history
-- Hover over an account and click **×** to delete it (only if you have multiple accounts)
+- Click the **✎ (edit)** button to rename any account
+- Click the **×** button to delete accounts (not available for the main account)
+- The main account (first account) is protected from deletion
 
 ### Transactions
 1. Add transactions using date, payee, description, notes, amount, and recurrence.
@@ -112,7 +114,9 @@ Open `index.html` directly in your browser for a basic offline experience (no pe
    - An in-page preview dialog appears before applying import (valid, duplicate, invalid counts) with Confirm/Cancel.
    - Import results/errors are shown as small in-page toast notifications.
 - Remove individual transactions or clear all data.
-   - When removing a recurring transaction, all future instances are also removed.
+   - When removing a recurring transaction instance, you can choose to delete only that occurrence or all future occurrences
+   - Past occurrences are always preserved for your financial history
+   - If you delete the original recurring transaction definition, all future instances are removed
    - Clear All uses an in-page confirmation dialog.
 
 ## Data Storage

@@ -118,43 +118,67 @@ function expandRecurringTransactions(transactions, months = 12) {
   const today = new Date();
   const endDate = new Date(today);
   endDate.setMonth(endDate.getMonth() + months);
-  
+  const validRecurrences = new Set(['weekly', 'bi-weekly', 'monthly', 'quarterly', 'yearly']);
+
   for (const txn of transactions) {
     // Add the original transaction
     expanded.push(txn);
-    
+
     // If it has recurrence, generate future instances
     if (txn.recurrence && txn.recurrence !== 'none') {
-      const startDate = new Date(txn.date + 'T00:00:00');
+      if (!validRecurrences.has(txn.recurrence)) {
+        console.warn('Skipping unknown recurrence type', {
+          id: txn.id,
+          recurrence: txn.recurrence,
+          date: txn.date
+        });
+        continue;
+      }
+
+      const startDate = new Date(`${txn.date}T00:00:00`);
+      if (Number.isNaN(startDate.getTime())) {
+        console.warn('Skipping recurrence with invalid date', {
+          id: txn.id,
+          recurrence: txn.recurrence,
+          date: txn.date
+        });
+        continue;
+      }
+
       let currentDate = new Date(startDate);
-      
+      let safetyCounter = 0;
+
       // Generate instances up to endDate
       while (true) {
+        const nextDate = new Date(currentDate);
+
         // Calculate next occurrence based on recurrence type
         switch (txn.recurrence) {
           case 'weekly':
-            currentDate.setDate(currentDate.getDate() + 7);
+            nextDate.setDate(nextDate.getDate() + 7);
             break;
           case 'bi-weekly':
-            currentDate.setDate(currentDate.getDate() + 14);
+            nextDate.setDate(nextDate.getDate() + 14);
             break;
           case 'monthly':
-            currentDate.setMonth(currentDate.getMonth() + 1);
+            nextDate.setMonth(nextDate.getMonth() + 1);
             break;
           case 'quarterly':
-            currentDate.setMonth(currentDate.getMonth() + 3);
+            nextDate.setMonth(nextDate.getMonth() + 3);
             break;
           case 'yearly':
-            currentDate.setFullYear(currentDate.getFullYear() + 1);
+            nextDate.setFullYear(nextDate.getFullYear() + 1);
             break;
           default:
-            // Unknown recurrence type, skip
             break;
         }
-        
-        // Stop if we've gone beyond the end date
-        if (currentDate > endDate) break;
-        
+
+        if (Number.isNaN(nextDate.getTime())) break;
+        if (nextDate <= currentDate) break;
+        if (nextDate > endDate) break;
+
+        currentDate = nextDate;
+
         // Create a new transaction instance
         const recurringInstance = {
           ...txn,
@@ -162,15 +186,25 @@ function expandRecurringTransactions(transactions, months = 12) {
           date: currentDate.toISOString().split('T')[0],
           isRecurringInstance: true // Mark as generated instance
         };
-        
+
         expanded.push(recurringInstance);
+
+        safetyCounter += 1;
+        if (safetyCounter > 1000) {
+          console.warn('Stopping recurring expansion after safety limit', {
+            id: txn.id,
+            recurrence: txn.recurrence,
+            date: txn.date
+          });
+          break;
+        }
       }
     }
   }
-  
+
   // Sort by date
   expanded.sort((a, b) => a.date.localeCompare(b.date));
-  
+
   return expanded;
 }
 
