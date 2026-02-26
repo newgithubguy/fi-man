@@ -20,6 +20,11 @@ app.use(cors());
 app.use(bodyParser.json({ limit: '10mb' }));
 app.use(express.static(path.join(__dirname)));
 
+// Handle favicon requests to prevent 404 errors
+app.get('/favicon.ico', (req, res) => {
+  res.status(204).end();
+});
+
 // Initialize SQLite database
 const db = new sqlite3.Database(DB_PATH, (err) => {
   if (err) {
