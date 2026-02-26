@@ -413,6 +413,22 @@ app.post('/api/entry-histories/:accountId', async (req, res) => {
   }
 });
 
+// Clear all database data
+app.delete('/api/clear-all', async (req, res) => {
+  try {
+    await dbRun('DELETE FROM transactions');
+    await dbRun('DELETE FROM accounts');
+    await dbRun('DELETE FROM active_account');
+    await dbRun('DELETE FROM entry_histories');
+    
+    console.log('Database cleared successfully');
+    res.json({ success: true, message: 'All data cleared' });
+  } catch (error) {
+    console.error('Error clearing database:', error);
+    res.status(500).json({ error: 'Failed to clear database' });
+  }
+});
+
 // Start server
 app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);

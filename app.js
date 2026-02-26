@@ -139,9 +139,9 @@ if (deleteAllConfirmation) {
 }
 
 if (deleteAllConfirm) {
-  deleteAllConfirm.addEventListener("click", () => {
+  deleteAllConfirm.addEventListener("click", async () => {
     if (deleteAllConfirmation.value === "DELETE ALL") {
-      deleteAllData();
+      await deleteAllData();
       deleteAllDataModal.setAttribute("hidden", "");
       deleteAllDataModal.setAttribute("aria-hidden", "true");
     }
@@ -1823,16 +1823,30 @@ function setPrimaryAccount(accountId) {
   renderAccounts();
 }
 
-function deleteAllData() {
-  accounts = [];
-  activeAccountId = null;
-  transactions = [];
-  payeeHistory = [];
-  descriptionHistory = [];
-  
-  saveAccounts();
-  saveActiveAccountId();
-  render();
+async function deleteAllData() {
+  try {
+    // Clear database on server
+    const response = await fetch(`${API_BASE_URL}/clear-all`, {
+      method: 'DELETE'
+    });
+    
+    if (!response.ok) {
+      throw new Error('Failed to clear database');
+    }
+    
+    // Clear local state
+    accounts = [];
+    activeAccountId = null;
+    transactions = [];
+    payeeHistory = [];
+    descriptionHistory = [];
+    
+    // Reload to get fresh state
+    await initialize();
+  } catch (error) {
+    console.error('Error deleting all data:', error);
+    alert('Failed to delete all data. Please try again.');
+  }
 }
 
 
