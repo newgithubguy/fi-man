@@ -3,21 +3,31 @@
 Simple browser-based finance tracker with:
 - **Multi-account support** - Create separate calendars for different accounts
 - **Linked transfers** - Transfer money between accounts (creates matching transactions)
-- Calendar view
-- Daily totals
-- Balance by day
-- Income vs Expenses line graph
+- Calendar view with daily totals and running balance
+- **Income vs Expenses graph** - Visualize financial trends over time
+- **Category breakdown** - Analyze spending by category with doughnut charts
 - Recurring transactions (daily, weekly, bi-weekly, monthly, quarterly, yearly)
 - CSV import/export
-- Local storage persistence
+- Built-in calculator positioned in the accounts sidebar
+- Data persistence with SQLite database (Docker) or browser storage
 
 ## Run
 
-### Option 1: Direct Browser (Simplest)
-Open `index.html` in your browser.
+### Option 1: Local Development (Recommended for Development)
+Requires Node.js installed.
 
-### Option 2: Docker Container (Local Network)
-To run on your local network, use Docker:
+```bash
+# Install dependencies
+npm install
+
+# Start the server
+npm start
+
+# Open in browser: http://localhost:3000
+```
+
+### Option 2: Docker Container (Best for Production/Sharing)
+Requires Docker and Docker Compose.
 
 ```bash
 # Quick start with Docker Compose
@@ -30,13 +40,8 @@ For detailed Docker setup instructions, see [DOCKER_SETUP.md](DOCKER_SETUP.md).
 
 **Prefer a UI?** Use [Portainer](PORTAINER_SETUP.md) for easy container management without command line.
 
-### Option 3: Local HTTP Server
-```bash
-# Python
-python -m http.server 8000
-
-# Then open: http://localhost:8000
-```
+### Option 3: Static HTML (Offline, Limited Features)
+Open `index.html` directly in your browser for a basic offline experience (no persistent storage).
 
 ## Use
 
@@ -68,23 +73,46 @@ python -m http.server 8000
 3. Move between months with arrow buttons.
 4. Review daily and balance totals directly in the calendar.
 5. Click on a day to view all transactions for that specific date (including recurring instances).
-6. Click "📊 View Graph" to see income vs expenses over time.
-   - Green line shows income trends
-   - Red line shows expense trends
-   - Adjust time range (30, 60, 90, 180, or 365 days)
-   - View summary statistics for the selected period
-7. Export transactions with **Export CSV**.
-8. Choose import mode:
+
+### Graphs & Analysis
+- Click **📊 Graph** to see income vs expenses over time.
+  - Green line shows income trends
+  - Red line shows expense trends
+  - Switch between time range (30, 60, 90, 180, or 365 days) or specific month view
+  - View summary statistics for the selected period
+  - Data automatically refreshes when returning from the calendar
+  - Use the **🔄 Refresh** button to manually reload data
+
+- Click **📂 Categories** to analyze spending and income by category.
+  - Doughnut charts showing percentage breakdown by category
+  - Category names are based on transaction descriptions
+  - View totals and percentages for each category
+  - Filter by time range or specific month
+  - List view shows all categories with visual bars and percentages
+
+### Tools
+- **Built-in Calculator**: Located in the left sidebar below accounts. Use for quick calculations while managing transactions.
+  - Supports basic operations (+, −, ×, ÷)
+  - Collapsible for space management
+  - Automatically repositions when adding new accounts
+
+### Import & Export
+- Export transactions with **Export CSV**.
+- Choose import mode:
    - **Merge Import** adds imported rows to existing data.
    - **Replace Import** overwrites existing data with imported rows.
-9. Import transactions with **Import CSV** (columns: date, payee, description, notes, amount, recurrence).
+- Import transactions with **Import CSV** (columns: date, payee, description, notes, amount, recurrence).
    - Payee, Notes, and Recurrence columns are optional.
    - Recurrence defaults to "one-time" if not provided.
    - Duplicate rows are skipped automatically.
    - An in-page preview dialog appears before applying import (valid, duplicate, invalid counts) with Confirm/Cancel.
    - Import results/errors are shown as small in-page toast notifications.
-9. Remove individual transactions or clear all data.
+- Remove individual transactions or clear all data.
    - When removing a recurring transaction, all future instances are also removed.
    - Clear All uses an in-page confirmation dialog.
 
-Data is stored in your browser's local storage under the key `finance-calendar-transactions`.
+## Data Storage
+
+**Docker/Server:** Data is persisted in SQLite database stored at `/data/finance.db` (mounted volume).
+
+**Browser (Offline):** Data is stored in browser's localStorage under the key `finance-calendar-transactions`.
