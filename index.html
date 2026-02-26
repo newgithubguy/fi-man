@@ -11,6 +11,7 @@
     <div class="accounts-header">
       <h2>Accounts</h2>
       <button id="addAccountBtn" type="button" class="add-account-btn" title="Add new account">+</button>
+      <button id="settingsBtn" type="button" class="settings-btn" title="Settings">⚙</button>
     </div>
     <ul id="accountsList" class="accounts-list"></ul>
     <section class="calculator" aria-label="Calculator">
@@ -287,6 +288,19 @@
           <button type="submit">Export CSV</button>
         </div>
       </form>
+    </section>
+  </div>
+
+  <div id="deleteAllDataModal" class="modal-backdrop" hidden aria-hidden="true">
+    <section class="modal-card" role="dialog" aria-modal="true" aria-labelledby="deleteAllDataTitle">
+      <h3 id="deleteAllDataTitle">Delete All Data</h3>
+      <p style="color: #d32f2f; font-weight: bold;">⚠️ This action cannot be undone. All accounts and transactions will be permanently deleted.</p>
+      <p>To confirm, type "DELETE ALL" in the box below:</p>
+      <input id="deleteAllConfirmation" type="text" placeholder="Type DELETE ALL to confirm" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; margin: 12px 0;" />
+      <div class="modal-actions">
+        <button id="deleteAllCancel" type="button">Cancel</button>
+        <button id="deleteAllConfirm" type="button" style="background-color: #d32f2f; color: white;" disabled>Delete All Data</button>
+      </div>
     </section>
   </div>
 

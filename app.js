@@ -109,6 +109,45 @@ if (addAccountBtn) {
   addAccountBtn.addEventListener("click", addAccount);
 }
 
+// Settings button and Delete All modal
+const settingsBtn = document.getElementById("settingsBtn");
+const deleteAllDataModal = document.getElementById("deleteAllDataModal");
+const deleteAllCancel = document.getElementById("deleteAllCancel");
+const deleteAllConfirm = document.getElementById("deleteAllConfirm");
+const deleteAllConfirmation = document.getElementById("deleteAllConfirmation");
+
+if (settingsBtn) {
+  settingsBtn.addEventListener("click", () => {
+    deleteAllDataModal.removeAttribute("hidden");
+    deleteAllDataModal.setAttribute("aria-hidden", "false");
+    deleteAllConfirmation.value = "";
+    deleteAllConfirm.disabled = true;
+  });
+}
+
+if (deleteAllCancel) {
+  deleteAllCancel.addEventListener("click", () => {
+    deleteAllDataModal.setAttribute("hidden", "");
+    deleteAllDataModal.setAttribute("aria-hidden", "true");
+  });
+}
+
+if (deleteAllConfirmation) {
+  deleteAllConfirmation.addEventListener("input", () => {
+    deleteAllConfirm.disabled = deleteAllConfirmation.value !== "DELETE ALL";
+  });
+}
+
+if (deleteAllConfirm) {
+  deleteAllConfirm.addEventListener("click", () => {
+    if (deleteAllConfirmation.value === "DELETE ALL") {
+      deleteAllData();
+      deleteAllDataModal.setAttribute("hidden", "");
+      deleteAllDataModal.setAttribute("aria-hidden", "true");
+    }
+  });
+}
+
 if (isTransferInput) {
   isTransferInput.addEventListener("change", () => {
     if (isTransferInput.checked) {
@@ -1518,7 +1557,7 @@ function renderAccounts() {
   
   accountsList.innerHTML = '';
   
-  accounts.forEach(account => {
+  accounts.forEach((account, index) => {
     const li = document.createElement('li');
     li.className = 'account-item';
     if (account.id === activeAccountId) {
@@ -1538,19 +1577,32 @@ function renderAccounts() {
       renameAccount(account.id);
     };
     
-    const deleteBtn = document.createElement('button');
-    deleteBtn.className = 'delete-account-btn';
-    deleteBtn.textContent = '×';
-    deleteBtn.title = 'Delete account';
-    deleteBtn.onclick = (e) => {
-      e.stopPropagation();
-      deleteAccount(account.id);
-    };
-    
     li.appendChild(nameSpan);
     li.appendChild(renameBtn);
-    // Show delete button for all accounts except the main account
-    if (accounts.length > 1 && accounts[0].id !== account.id) {
+    
+    // Show "Set as Primary" button for non-primary accounts
+    if (index > 0) {
+      const setPrimaryBtn = document.createElement('button');
+      setPrimaryBtn.className = 'set-primary-btn';
+      setPrimaryBtn.textContent = '⭐';
+      setPrimaryBtn.title = 'Make this the primary account';
+      setPrimaryBtn.onclick = (e) => {
+        e.stopPropagation();
+        setPrimaryAccount(account.id);
+      };
+      li.appendChild(setPrimaryBtn);
+    }
+    
+    // Show delete button for all non-primary accounts
+    if (index > 0) {
+      const deleteBtn = document.createElement('button');
+      deleteBtn.className = 'delete-account-btn';
+      deleteBtn.textContent = '×';
+      deleteBtn.title = 'Delete account';
+      deleteBtn.onclick = (e) => {
+        e.stopPropagation();
+        deleteAccount(account.id);
+      };
       li.appendChild(deleteBtn);
     }
     
@@ -1637,6 +1689,31 @@ function deleteAccount(accountId) {
   saveAccounts();
   render();
 }
+
+function setPrimaryAccount(accountId) {
+  const account = accounts.find(acc => acc.id === accountId);
+  if (!account || accounts[0].id === accountId) return;
+  
+  // Move the clicked account to the front
+  accounts = accounts.filter(acc => acc.id !== accountId);
+  accounts.unshift(account);
+  
+  saveAccounts();
+  renderAccounts();
+}
+
+function deleteAllData() {
+  accounts = [];
+  activeAccountId = null;
+  transactions = [];
+  payeeHistory = [];
+  descriptionHistory = [];
+  
+  saveAccounts();
+  saveActiveAccountId();
+  render();
+}
+
 
 function updateTransferAccountOptions(selectElement, labelElement) {
   if (!selectElement) return;
