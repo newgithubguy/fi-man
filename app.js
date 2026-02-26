@@ -156,15 +156,26 @@ const deleteThisOnlyBtn = document.getElementById("deleteThisOnlyBtn");
 const deleteFutureBtn = document.getElementById("deleteFutureBtn");
 const deleteRecurringCancel = document.getElementById("deleteRecurringCancel");
 
+if (!deleteRecurringModal) {
+  console.error('deleteRecurringModal not found in DOM');
+}
+
 function openDeleteRecurringModal(txn) {
+  console.log('Opening delete recurring modal for:', txn);
+  if (!deleteRecurringModal) {
+    console.error('Modal not found, cannot open');
+    return;
+  }
   pendingRecurringDelete = txn;
   deleteRecurringModal.removeAttribute("hidden");
   deleteRecurringModal.setAttribute("aria-hidden", "false");
 }
 
 function closeDeleteRecurringModal() {
-  deleteRecurringModal.setAttribute("hidden", "");
-  deleteRecurringModal.setAttribute("aria-hidden", "true");
+  if (deleteRecurringModal) {
+    deleteRecurringModal.setAttribute("hidden", "");
+    deleteRecurringModal.setAttribute("aria-hidden", "true");
+  }
   pendingRecurringDelete = null;
 }
 
@@ -1610,16 +1621,19 @@ function renderTransactions() {
     removeButton.className = "remove-btn";
     removeButton.textContent = "Remove";
     removeButton.addEventListener("click", () => {
+      console.log('Remove clicked for item:', item);
       const txnToDelete = transactions.find(tx => tx.id === idToUse);
       
       if (!txnToDelete) return;
       
       // Handle recurring transaction deletion - check the displayed item, not the original
       if (item.isRecurring && item.originalId) {
+        console.log('This is a recurring instance, showing modal');
         // This is a recurring instance - show modal with options
         // Pass the item which has the date of this specific occurrence
         openDeleteRecurringModal(item);
       } else {
+        console.log('Not a recurring instance or no originalId, deleting normally');
         // Normal transaction or original recurring transaction - delete it
         if (txnToDelete.linkedTransactionId && txnToDelete.linkedAccountId) {
           deleteLinkedTransaction(txnToDelete.linkedTransactionId, txnToDelete.linkedAccountId);
