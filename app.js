@@ -759,7 +759,11 @@ async function loadAccountsFromAPI() {
     if (!response.ok) {
       throw new Error('Failed to load accounts');
     }
-    return await response.json();
+    const loadedAccounts = await response.json();
+    return loadedAccounts.map((account) => ({
+      ...account,
+      transactions: (account.transactions || []).filter((txn) => !txn.isRecurringInstance)
+    }));
   } catch (error) {
     console.error('Error loading accounts:', error);
     return [];
@@ -821,12 +825,13 @@ async function saveActiveAccountIdToAPI() {
 async function persistTransactionsToAPI() {
   const activeAccount = accounts.find(acc => acc.id === activeAccountId);
   if (activeAccount) {
-    activeAccount.transactions = transactions;
+    const cleanedTransactions = transactions.filter((txn) => !txn.isRecurringInstance);
+    activeAccount.transactions = cleanedTransactions;
     try {
       const response = await fetch(`${API_BASE_URL}/transactions`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ accountId: activeAccountId, transactions })
+        body: JSON.stringify({ accountId: activeAccountId, transactions: cleanedTransactions })
       });
       if (!response.ok) {
         throw new Error('Failed to save transactions');
@@ -1572,7 +1577,7 @@ function renderTransactions() {
   
   if (selectedDateKey) {
     // Get expanded transactions for a range around the selected date
-    const selectedDate = new Date(selectedDateKey + 'T00:00:00');
+      .filter((entry) => entry && !entry.isRecurringInstance && entry.date && entry.description && Number.isFinite(Number(entry.amount)))
     const expandStart = new Date(selectedDate);
     expandStart.setFullYear(expandStart.getFullYear() - 1);
     const expandEnd = new Date(selectedDate);
