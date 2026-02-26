@@ -3,21 +3,21 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Income vs Expenses - Finance Calendar</title>
+  <title>Category Breakdown - Finance Calendar</title>
   <link rel="stylesheet" href="styles.css" />
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
   <main class="app">
     <header class="topbar">
-      <h1>Income vs Expenses</h1>
-      <p class="subtitle">Track your financial trends over time</p>
+      <h1>Category Breakdown</h1>
+      <p class="subtitle">Analyze your spending and income by category</p>
     </header>
 
     <section class="controls card">
       <div class="graph-controls">
         <a href="index.html" class="back-link">← Back to Calendar</a>
-        <a href="categories.html" class="graph-link">📂 Categories</a>
+        <a href="graph.html" class="graph-link">📊 Graph</a>
         <button id="refreshDataBtn" class="refresh-btn" title="Refresh data">🔄 Refresh</button>
         <div class="view-mode-controls">
           <label>
@@ -64,22 +64,26 @@
             </select>
           </label>
         </div>
-        <div class="chart-type-controls">
-          <label>
-            Chart Type
-            <select id="chartType">
-              <option value="line" selected>Line</option>
-              <option value="bar">Bar</option>
-              <option value="pie">Pie</option>
-            </select>
-          </label>
-        </div>
       </div>
     </section>
 
-    <section class="card chart-container">
-      <canvas id="incomeExpensesChart"></canvas>
-    </section>
+    <div class="category-layout">
+      <section class="card">
+        <h3>Expenses by Category</h3>
+        <div class="chart-container">
+          <canvas id="expensesChart"></canvas>
+        </div>
+        <div class="category-list" id="expensesList"></div>
+      </section>
+
+      <section class="card">
+        <h3>Income by Category</h3>
+        <div class="chart-container">
+          <canvas id="incomeChart"></canvas>
+        </div>
+        <div class="category-list" id="incomeList"></div>
+      </section>
+    </div>
 
     <section class="card">
       <h3>Summary</h3>
@@ -100,6 +104,6 @@
     </section>
   </main>
 
-  <script src="graph.js"></script>
+  <script src="categories.js"></script>
 </body>
 </html>

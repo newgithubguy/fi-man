@@ -6,13 +6,15 @@ const monthSelect = document.getElementById("monthSelect");
 const viewModeRadios = document.querySelectorAll('input[name="viewMode"]');
 const timeRangeControls = document.getElementById("timeRangeControls");
 const monthSelectorControls = document.getElementById("monthSelectorControls");
-const chartTypeSelect = document.getElementById("chartType");
 const totalIncomeDisplay = document.getElementById("totalIncome");
 const totalExpensesDisplay = document.getElementById("totalExpenses");
 const netAmountDisplay = document.getElementById("netAmount");
 const refreshDataBtn = document.getElementById("refreshDataBtn");
+const expensesList = document.getElementById("expensesList");
+const incomeList = document.getElementById("incomeList");
 
-let chart = null;
+let expensesChart = null;
+let incomeChart = null;
 let accounts = [];
 let activeAccountId = null;
 let transactions = [];
@@ -135,104 +137,70 @@ function expandRecurringTransactions(startDate, endDate) {
   return expanded;
 }
 
-function prepareChartData(days) {
+function prepareCategoryData(days) {
   const endDate = new Date();
   const startDate = new Date();
   startDate.setDate(startDate.getDate() - days);
   
   const allTransactions = expandRecurringTransactions(startDate, endDate);
   
-  // Group by date
-  const dailyData = new Map();
-  
-  // Initialize all dates in range
-  for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
-    const dateKey = toDateKey(d);
-    dailyData.set(dateKey, { income: 0, expenses: 0 });
-  }
-  
-  // Populate with transaction data
-  for (const txn of allTransactions) {
-    if (dailyData.has(txn.date)) {
-      const data = dailyData.get(txn.date);
-      if (txn.amount > 0) {
-        data.income += txn.amount;
-      } else {
-        data.expenses += Math.abs(txn.amount);
-      }
-    }
-  }
-  
-  // Convert to arrays for Chart.js
-  const labels = [];
-  const incomeData = [];
-  const expensesData = [];
+  const expensesByCategory = new Map();
+  const incomeByCategory = new Map();
   let totalIncome = 0;
   let totalExpenses = 0;
   
-  for (const [date, data] of dailyData) {
-    labels.push(date);
-    incomeData.push(data.income);
-    expensesData.push(data.expenses);
-    totalIncome += data.income;
-    totalExpenses += data.expenses;
+  for (const txn of allTransactions) {
+    const category = txn.description || 'Uncategorized';
+    const amount = Math.abs(txn.amount);
+    
+    if (txn.amount < 0) {
+      // Expense
+      expensesByCategory.set(category, (expensesByCategory.get(category) || 0) + amount);
+      totalExpenses += amount;
+    } else if (txn.amount > 0) {
+      // Income
+      incomeByCategory.set(category, (incomeByCategory.get(category) || 0) + amount);
+      totalIncome += amount;
+    }
   }
   
   return {
-    labels,
-    incomeData,
-    expensesData,
+    expensesByCategory,
+    incomeByCategory,
     totalIncome,
     totalExpenses,
   };
 }
 
-function prepareMonthChartData(year, month) {
+function prepareMonthCategoryData(year, month) {
   const startDate = new Date(year, month, 1);
   const endDate = new Date(year, month + 1, 0);
   
   const allTransactions = expandRecurringTransactions(startDate, endDate);
   
-  // Group by date
-  const dailyData = new Map();
-  
-  // Initialize all dates in the month
-  for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
-    const dateKey = toDateKey(d);
-    dailyData.set(dateKey, { income: 0, expenses: 0 });
-  }
-  
-  // Populate with transaction data
-  for (const txn of allTransactions) {
-    if (dailyData.has(txn.date)) {
-      const data = dailyData.get(txn.date);
-      if (txn.amount > 0) {
-        data.income += txn.amount;
-      } else {
-        data.expenses += Math.abs(txn.amount);
-      }
-    }
-  }
-  
-  // Convert to arrays for Chart.js
-  const labels = [];
-  const incomeData = [];
-  const expensesData = [];
+  const expensesByCategory = new Map();
+  const incomeByCategory = new Map();
   let totalIncome = 0;
   let totalExpenses = 0;
   
-  for (const [date, data] of dailyData) {
-    labels.push(date);
-    incomeData.push(data.income);
-    expensesData.push(data.expenses);
-    totalIncome += data.income;
-    totalExpenses += data.expenses;
+  for (const txn of allTransactions) {
+    const category = txn.description || 'Uncategorized';
+    const amount = Math.abs(txn.amount);
+    
+    if (txn.amount < 0) {
+      // Expense
+      expensesByCategory.set(category, (expensesByCategory.get(category) || 0) + amount);
+      totalExpenses += amount;
+    } else if (txn.amount > 0) {
+      // Income
+      incomeByCategory.set(category, (incomeByCategory.get(category) || 0) + amount);
+      totalIncome += amount;
+    }
   }
   
   return {
-    labels,
-    incomeData,
-    expensesData,
+    expensesByCategory,
+    incomeByCategory,
     totalIncome,
     totalExpenses,
   };
@@ -259,113 +227,171 @@ function populateYearSelect() {
   ).join('');
 }
 
-function updateChart() {
-  let chartData;
+function renderCategoryList(container, categoryMap, total) {
+  if (categoryMap.size === 0) {
+    container.innerHTML = '<p class="empty-message">No transactions found</p>';
+    return;
+  }
+  
+  // Sort by amount descending
+  const sorted = Array.from(categoryMap.entries()).sort((a, b) => b[1] - a[1]);
+  
+  let html = '<div class="category-breakdown">';
+  for (const [category, amount] of sorted) {
+    const percentage = total > 0 ? (amount / total * 100).toFixed(1) : 0;
+    html += `
+      <div class="category-row">
+        <div class="category-info">
+          <span class="category-name">${category}</span>
+          <span class="category-amount">${formatCurrency(amount)}</span>
+        </div>
+        <div class="category-bar-container">
+          <div class="category-bar" style="width: ${percentage}%"></div>
+          <span class="category-percentage">${percentage}%</span>
+        </div>
+      </div>
+    `;
+  }
+  html += '</div>';
+  
+  container.innerHTML = html;
+}
+
+function updateCharts() {
+  let categoryData;
   
   if (viewMode === "timeRange") {
     const days = parseInt(timeRangeSelect.value);
-    chartData = prepareChartData(days);
+    categoryData = prepareCategoryData(days);
   } else {
     const year = parseInt(yearSelect.value);
     const month = parseInt(monthSelect.value);
-    chartData = prepareMonthChartData(year, month);
+    categoryData = prepareMonthCategoryData(year, month);
   }
   
   // Update summary stats
-  totalIncomeDisplay.textContent = formatCurrency(chartData.totalIncome);
-  totalExpensesDisplay.textContent = formatCurrency(chartData.totalExpenses);
-  const net = chartData.totalIncome - chartData.totalExpenses;
+  totalIncomeDisplay.textContent = formatCurrency(categoryData.totalIncome);
+  totalExpensesDisplay.textContent = formatCurrency(categoryData.totalExpenses);
+  const net = categoryData.totalIncome - categoryData.totalExpenses;
   netAmountDisplay.textContent = formatCurrency(net);
   netAmountDisplay.className = net === 0 ? "" : net > 0 ? "positive" : "negative";
   
-  // Destroy existing chart if it exists
-  if (chart) {
-    chart.destroy();
+  // Render category lists
+  renderCategoryList(expensesList, categoryData.expensesByCategory, categoryData.totalExpenses);
+  renderCategoryList(incomeList, categoryData.incomeByCategory, categoryData.totalIncome);
+  
+  // Update expenses chart
+  if (expensesChart) {
+    expensesChart.destroy();
   }
   
-  const chartType = chartTypeSelect?.value || 'line';
-
-  // Create new chart
-  const ctx = document.getElementById('incomeExpensesChart').getContext('2d');
-  const isPie = chartType === 'pie';
-  const datasets = isPie
-    ? [{
-        data: [chartData.totalIncome, chartData.totalExpenses],
-        backgroundColor: ['#10b981', '#ef4444'],
-        borderColor: ['#0f9f74', '#dc2626'],
-        borderWidth: 1,
-      }]
-    : [
-        {
-          label: 'Income',
-          data: chartData.incomeData,
-          borderColor: '#10b981',
-          backgroundColor: chartType === 'line' ? 'rgba(16, 185, 129, 0.1)' : 'rgba(16, 185, 129, 0.6)',
+  if (categoryData.expensesByCategory.size > 0) {
+    const expenseCtx = document.getElementById('expensesChart').getContext('2d');
+    const expenseLabels = Array.from(categoryData.expensesByCategory.keys());
+    const expenseData = Array.from(categoryData.expensesByCategory.values());
+    
+    expensesChart = new Chart(expenseCtx, {
+      type: 'doughnut',
+      data: {
+        labels: expenseLabels,
+        datasets: [{
+          data: expenseData,
+          backgroundColor: [
+            '#ef4444', '#f97316', '#f59e0b', '#eab308', '#84cc16',
+            '#22c55e', '#10b981', '#14b8a6', '#06b6d4', '#0ea5e9',
+            '#3b82f6', '#6366f1', '#8b5cf6', '#a855f7', '#d946ef',
+            '#ec4899', '#f43f5e'
+          ],
           borderWidth: 2,
-          tension: 0.4,
-          fill: chartType === 'line',
-        },
-        {
-          label: 'Expenses',
-          data: chartData.expensesData,
-          borderColor: '#ef4444',
-          backgroundColor: chartType === 'line' ? 'rgba(239, 68, 68, 0.1)' : 'rgba(239, 68, 68, 0.6)',
-          borderWidth: 2,
-          tension: 0.4,
-          fill: chartType === 'line',
-        }
-      ];
-
-  chart = new Chart(ctx, {
-    type: chartType,
-    data: {
-      labels: isPie ? ['Income', 'Expenses'] : chartData.labels,
-      datasets
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: true,
-      interaction: isPie ? undefined : {
-        mode: 'index',
-        intersect: false,
+          borderColor: '#fff'
+        }]
       },
-      plugins: {
-        legend: {
-          display: true,
-          position: 'top',
-        },
-        tooltip: {
-          callbacks: {
-            label: function(context) {
-              const label = context.dataset.label || context.label || '';
-              const value = isPie ? context.parsed : context.parsed.y;
-              return `${label}: ${formatCurrency(value)}`;
+      options: {
+        responsive: true,
+        maintainAspectRatio: true,
+        plugins: {
+          legend: {
+            position: 'bottom',
+            labels: {
+              boxWidth: 12,
+              padding: 10,
+              font: {
+                size: 11
+              }
             }
-          }
-        }
-      },
-      scales: isPie ? undefined : {
-        y: {
-          beginAtZero: true,
-          ticks: {
-            callback: function(value) {
-              return '$' + value.toFixed(0);
+          },
+          tooltip: {
+            callbacks: {
+              label: function(context) {
+                const label = context.label || '';
+                const value = context.parsed;
+                const percentage = ((value / categoryData.totalExpenses) * 100).toFixed(1);
+                return `${label}: ${formatCurrency(value)} (${percentage}%)`;
+              }
             }
-          }
-        },
-        x: {
-          ticks: {
-            maxTicksLimit: 12,
-            autoSkip: true,
           }
         }
       }
-    }
-  });
+    });
+  }
+  
+  // Update income chart
+  if (incomeChart) {
+    incomeChart.destroy();
+  }
+  
+  if (categoryData.incomeByCategory.size > 0) {
+    const incomeCtx = document.getElementById('incomeChart').getContext('2d');
+    const incomeLabels = Array.from(categoryData.incomeByCategory.keys());
+    const incomeData = Array.from(categoryData.incomeByCategory.values());
+    
+    incomeChart = new Chart(incomeCtx, {
+      type: 'doughnut',
+      data: {
+        labels: incomeLabels,
+        datasets: [{
+          data: incomeData,
+          backgroundColor: [
+            '#10b981', '#14b8a6', '#06b6d4', '#0ea5e9', '#3b82f6',
+            '#6366f1', '#8b5cf6', '#a855f7', '#22c55e', '#84cc16',
+            '#eab308', '#f59e0b', '#f97316', '#ef4444', '#ec4899'
+          ],
+          borderWidth: 2,
+          borderColor: '#fff'
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: true,
+        plugins: {
+          legend: {
+            position: 'bottom',
+            labels: {
+              boxWidth: 12,
+              padding: 10,
+              font: {
+                size: 11
+              }
+            }
+          },
+          tooltip: {
+            callbacks: {
+              label: function(context) {
+                const label = context.label || '';
+                const value = context.parsed;
+                const percentage = ((value / categoryData.totalIncome) * 100).toFixed(1);
+                return `${label}: ${formatCurrency(value)} (${percentage}%)`;
+              }
+            }
+          }
+        }
+      }
+    });
+  }
 }
 
 // Event listeners
-timeRangeSelect.addEventListener('change', updateChart);
+timeRangeSelect.addEventListener('change', updateCharts);
 
 // View mode radio buttons
 viewModeRadios.forEach(radio => {
@@ -380,17 +406,13 @@ viewModeRadios.forEach(radio => {
       monthSelectorControls.style.display = 'block';
     }
     
-    updateChart();
+    updateCharts();
   });
 });
 
 // Year and month selects
-yearSelect.addEventListener('change', updateChart);
-monthSelect.addEventListener('change', updateChart);
-
-if (chartTypeSelect) {
-  chartTypeSelect.addEventListener('change', updateChart);
-}
+yearSelect.addEventListener('change', updateCharts);
+monthSelect.addEventListener('change', updateCharts);
 
 // Refresh button
 if (refreshDataBtn) {
@@ -403,7 +425,7 @@ if (refreshDataBtn) {
   });
 }
 
-// Initialize year selector and render chart
+// Initialize
 async function initialize() {
   try {
     accounts = await loadAccountsFromAPI();
@@ -411,13 +433,13 @@ async function initialize() {
     transactions = selectActiveAccountTransactions();
     populateYearSelect();
     monthSelect.value = new Date().getMonth();
-    updateChart();
+    updateCharts();
   } catch (error) {
-    console.error('Error initializing graph data:', error);
+    console.error('Error initializing category data:', error);
   }
 }
 
-// Reload data when page becomes visible (e.g., when returning from calendar page)
+// Reload data when page becomes visible
 document.addEventListener('visibilitychange', () => {
   if (!document.hidden) {
     initialize();
