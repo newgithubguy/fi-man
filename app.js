@@ -154,6 +154,7 @@ const deleteRecurringModal = document.getElementById("deleteRecurringModal");
 const deletePreviousBtn = document.getElementById("deletePreviousBtn");
 const deleteThisOnlyBtn = document.getElementById("deleteThisOnlyBtn");
 const deleteFutureBtn = document.getElementById("deleteFutureBtn");
+const deleteAllOccurrencesBtn = document.getElementById("deleteAllOccurrencesBtn");
 const deleteRecurringCancel = document.getElementById("deleteRecurringCancel");
 
 if (!deleteRecurringModal) {
@@ -161,7 +162,6 @@ if (!deleteRecurringModal) {
 }
 
 function openDeleteRecurringModal(txn) {
-  console.log('Opening delete recurring modal for:', txn);
   if (!deleteRecurringModal) {
     console.error('Modal not found, cannot open');
     return;
@@ -250,6 +250,27 @@ if (deleteFutureBtn) {
     originalTxn.recurrenceEndDate = toDateKey(thisDate);
     
     commitTransactions(transactions);
+    closeDeleteRecurringModal();
+  });
+}
+
+if (deleteAllOccurrencesBtn) {
+  deleteAllOccurrencesBtn.addEventListener("click", () => {
+    if (!pendingRecurringDelete) return;
+    
+    const recurringItem = pendingRecurringDelete;
+    const originalTxn = transactions.find(tx => tx.id === recurringItem.originalId);
+    
+    if (!originalTxn) return;
+    
+    // Delete linked transaction if exists
+    if (originalTxn.linkedTransactionId && originalTxn.linkedAccountId) {
+      deleteLinkedTransaction(originalTxn.linkedTransactionId, originalTxn.linkedAccountId);
+    }
+    
+    // Delete the original recurring transaction completely
+    const remainingTransactions = transactions.filter(tx => tx.id !== recurringItem.originalId);
+    commitTransactions(remainingTransactions);
     closeDeleteRecurringModal();
   });
 }
@@ -1621,19 +1642,16 @@ function renderTransactions() {
     removeButton.className = "remove-btn";
     removeButton.textContent = "Remove";
     removeButton.addEventListener("click", () => {
-      console.log('Remove clicked for item:', item);
       const txnToDelete = transactions.find(tx => tx.id === idToUse);
       
       if (!txnToDelete) return;
       
       // Handle recurring transaction deletion - check the displayed item, not the original
       if (item.isRecurring && item.originalId) {
-        console.log('This is a recurring instance, showing modal');
         // This is a recurring instance - show modal with options
         // Pass the item which has the date of this specific occurrence
         openDeleteRecurringModal(item);
       } else {
-        console.log('Not a recurring instance or no originalId, deleting normally');
         // Normal transaction or original recurring transaction - delete it
         if (txnToDelete.linkedTransactionId && txnToDelete.linkedAccountId) {
           deleteLinkedTransaction(txnToDelete.linkedTransactionId, txnToDelete.linkedAccountId);

@@ -119,10 +119,11 @@ Open `index.html` directly in your browser for a basic offline experience (no pe
    - An in-page preview dialog appears before applying import (valid, duplicate, invalid counts) with Confirm/Cancel.
    - Import results/errors are shown as small in-page toast notifications.
 - Remove individual transactions or clear all data.
-   - When removing a recurring transaction instance, a dialog appears with three options:
+   - When removing a recurring transaction instance, a dialog appears with four options:
      - **Delete All Previous**: Removes the original transaction definition and all instances up to and including this date
      - **Delete Only This Occurrence**: Removes just this single instance (past and future occurrences remain)
      - **Delete All Future**: Removes the original transaction definition and all future instances (past occurrences are preserved)
+     - **Delete All Occurrences**: Completely removes the recurring transaction and all of its occurrences
    - If you delete the original recurring transaction definition directly, all instances are removed
    - Clear All uses an in-page confirmation dialog.
 
