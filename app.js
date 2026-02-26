@@ -348,20 +348,17 @@ exportCancel.addEventListener("click", () => {
 exportDateRangeForm.addEventListener("submit", (event) => {
   event.preventDefault();
   
-  // Get date range values
-  const fromDate = exportFromDate.value ? new Date(exportFromDate.value) : null;
-  const toDate = exportToDate.value ? new Date(exportToDate.value) : null;
+  // Get date range values as strings (YYYY-MM-DD format)
+  const fromDate = exportFromDate.value || null;
+  const toDate = exportToDate.value || null;
   
-  // Filter transactions by date range
+  // Filter transactions by date range (compare strings directly to avoid timezone issues)
   let filteredTransactions = transactions;
   if (fromDate) {
-    filteredTransactions = filteredTransactions.filter(t => new Date(t.date) >= fromDate);
+    filteredTransactions = filteredTransactions.filter(t => t.date >= fromDate);
   }
   if (toDate) {
-    // Set to end of day to include the full date
-    const toDateEndOfDay = new Date(toDate);
-    toDateEndOfDay.setHours(23, 59, 59, 999);
-    filteredTransactions = filteredTransactions.filter(t => new Date(t.date) <= toDateEndOfDay);
+    filteredTransactions = filteredTransactions.filter(t => t.date <= toDate);
   }
   
   // Generate and download CSV
@@ -409,19 +406,15 @@ document.addEventListener("keydown", (event) => {
 });
 
 function updateExportTransactionCount() {
-  const fromDate = exportFromDate.value ? new Date(exportFromDate.value) : null;
-  const toDate = exportToDate.value ? new Date(exportToDate.value) : null;
+  const fromDate = exportFromDate.value || null;
+  const toDate = exportToDate.value || null;
   
   let count = transactions.length;
   if (fromDate || toDate) {
     count = transactions.filter(t => {
-      const tDate = new Date(t.date);
-      if (fromDate && tDate < fromDate) return false;
-      if (toDate) {
-        const toDateEndOfDay = new Date(toDate);
-        toDateEndOfDay.setHours(23, 59, 59, 999);
-        if (tDate > toDateEndOfDay) return false;
-      }
+      // Compare date strings directly (YYYY-MM-DD format)
+      if (fromDate && t.date < fromDate) return false;
+      if (toDate && t.date > toDate) return false;
       return true;
     }).length;
   }
