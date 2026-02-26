@@ -6,8 +6,8 @@ Simple browser-based finance tracker with:
 - Calendar view with daily totals and running balance
 - **Income vs Expenses graph** - Visualize financial trends over time
 - **Category breakdown** - Analyze spending by category with doughnut charts
-- Recurring transactions (daily, weekly, bi-weekly, monthly, quarterly, yearly)
-- CSV import/export
+- **Recurring transactions** - Automatically expand weekly, bi-weekly, monthly, quarterly, and yearly transactions
+- CSV import/export with recurring transaction expansion
 - Built-in calculator positioned in the accounts sidebar
 - Data persistence with SQLite database (Docker) or browser storage
 
@@ -98,6 +98,10 @@ Open `index.html` directly in your browser for a basic offline experience (no pe
 
 ### Import & Export
 - Export transactions with **Export CSV**.
+   - Select a date range to export specific transactions
+   - CSV includes all recurring transaction instances within the selected date range
+   - Recurring transactions are automatically expanded to show each occurrence (up to 12 months)
+   - Export "All" transactions to get the complete dataset including all generated recurring instances
 - Choose import mode:
    - **Merge Import** adds imported rows to existing data.
    - **Replace Import** overwrites existing data with imported rows.
