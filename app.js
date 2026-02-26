@@ -1926,5 +1926,10 @@ async function initialize() {
   }
 }
 
-// Start initialization
-initialize();
+// Start initialization once DOM is ready
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initialize);
+} else {
+  // DOM is already loaded
+  initialize();
+}
