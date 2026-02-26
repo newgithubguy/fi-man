@@ -1513,7 +1513,8 @@ function renderAccounts() {
     };
     
     li.appendChild(nameSpan);
-    if (accounts.length > 1) {
+    // Show delete button for all accounts except the main account
+    if (accounts.length > 1 && accounts[0].id !== account.id) {
       li.appendChild(deleteBtn);
     }
     
@@ -1558,8 +1559,9 @@ function addAccount() {
 }
 
 function deleteAccount(accountId) {
-  if (accounts.length === 1) {
-    alert('Cannot delete the last account.');
+  // Prevent deletion of the main account
+  if (accounts.length > 0 && accounts[0].id === accountId) {
+    alert('Cannot delete the main account. You must keep at least one account.');
     return;
   }
   
