@@ -332,9 +332,6 @@ document.getElementById("clearAll").addEventListener("click", async () => {
 });
 
 exportCsvButton.addEventListener("click", () => {
-  console.log('[Export] Button clicked, transactions count:', transactions.length);
-  console.log('[Export] Sample transactions:', transactions.slice(0, 3));
-  
   // Reset modal fields
   exportFromDate.value = "";
   exportToDate.value = "";
@@ -351,15 +348,9 @@ exportCancel.addEventListener("click", () => {
 exportDateRangeForm.addEventListener("submit", (event) => {
   event.preventDefault();
   
-  console.log('[Export] Form submitted');
-  console.log('[Export] Transactions array:', transactions);
-  console.log('[Export] Transactions count before filter:', transactions.length);
-  
   // Get date range values as strings (YYYY-MM-DD format)
   const fromDate = exportFromDate.value || null;
   const toDate = exportToDate.value || null;
-  
-  console.log('[Export] Date range:', { fromDate, toDate });
   
   // Filter transactions by date range (compare strings directly to avoid timezone issues)
   let filteredTransactions = transactions;
@@ -370,14 +361,8 @@ exportDateRangeForm.addEventListener("submit", (event) => {
     filteredTransactions = filteredTransactions.filter(t => t.date <= toDate);
   }
   
-  console.log('[Export] Filtered transactions count:', filteredTransactions.length);
-  console.log('[Export] Filtered transactions:', filteredTransactions);
-  
   // Generate and download CSV
   const csv = toCsv(filteredTransactions);
-  console.log('[Export] Generated CSV length:', csv.length);
-  console.log('[Export] Generated CSV preview:', csv.substring(0, 200));
-  
   const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
   const url = URL.createObjectURL(blob);
   const anchor = document.createElement("a");
