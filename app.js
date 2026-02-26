@@ -1503,6 +1503,15 @@ function renderAccounts() {
     nameSpan.className = 'account-name';
     nameSpan.textContent = account.name;
     
+    const renameBtn = document.createElement('button');
+    renameBtn.className = 'rename-account-btn';
+    renameBtn.textContent = '✎';
+    renameBtn.title = 'Rename account';
+    renameBtn.onclick = (e) => {
+      e.stopPropagation();
+      renameAccount(account.id);
+    };
+    
     const deleteBtn = document.createElement('button');
     deleteBtn.className = 'delete-account-btn';
     deleteBtn.textContent = '×';
@@ -1513,6 +1522,7 @@ function renderAccounts() {
     };
     
     li.appendChild(nameSpan);
+    li.appendChild(renameBtn);
     // Show delete button for all accounts except the main account
     if (accounts.length > 1 && accounts[0].id !== account.id) {
       li.appendChild(deleteBtn);
@@ -1534,6 +1544,24 @@ function switchAccount(accountId) {
   activeAccountId = accountId;
   saveActiveAccountId();
   transactions = loadTransactions();
+  render();
+}
+
+function renameAccount(accountId) {
+  const account = accounts.find(acc => acc.id === accountId);
+  if (!account) return;
+  
+  const newName = prompt('Enter new account name:', account.name);
+  if (newName === null) return; // User cancelled
+  
+  const trimmedName = newName.trim();
+  if (!trimmedName) {
+    alert('Account name cannot be empty.');
+    return;
+  }
+  
+  account.name = trimmedName;
+  saveAccounts();
   render();
 }
 
