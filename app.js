@@ -1467,13 +1467,39 @@ function renderTransactions() {
     removeButton.addEventListener("click", () => {
       const txnToDelete = transactions.find(tx => tx.id === idToUse);
       
-      // Delete linked transaction if exists
-      if (txnToDelete && txnToDelete.linkedTransactionId && txnToDelete.linkedAccountId) {
-        deleteLinkedTransaction(txnToDelete.linkedTransactionId, txnToDelete.linkedAccountId);
-      }
+      if (!txnToDelete) return;
       
-      const remainingTransactions = transactions.filter((tx) => tx.id !== idToUse);
-      commitTransactions(remainingTransactions);
+      // Handle recurring transaction deletion
+      if (txnToDelete.isRecurring && txnToDelete.originalId) {
+        // This is a recurring instance - ask user what to do
+        const message = `Delete this occurrence only, or all future occurrences?\n\nYes = This occurrence only\nCancel = Never mind`;
+        const deleteThisOnly = confirm(message);
+        
+        if (deleteThisOnly === null) return; // User cancelled
+        
+        // Delete linked transaction if exists
+        if (txnToDelete.linkedTransactionId && txnToDelete.linkedAccountId) {
+          deleteLinkedTransaction(txnToDelete.linkedTransactionId, txnToDelete.linkedAccountId);
+        }
+        
+        if (deleteThisOnly) {
+          // Delete only this specific occurrence
+          const remainingTransactions = transactions.filter((tx) => tx.id !== idToUse);
+          commitTransactions(remainingTransactions);
+        } else {
+          // Delete this and all future occurrences - remove the original recurring transaction
+          const remainingTransactions = transactions.filter((tx) => tx.id !== txnToDelete.originalId && tx.originalId !== txnToDelete.originalId);
+          commitTransactions(remainingTransactions);
+        }
+      } else {
+        // Normal transaction or original recurring transaction - delete it
+        if (txnToDelete.linkedTransactionId && txnToDelete.linkedAccountId) {
+          deleteLinkedTransaction(txnToDelete.linkedTransactionId, txnToDelete.linkedAccountId);
+        }
+        
+        const remainingTransactions = transactions.filter((tx) => tx.id !== idToUse);
+        commitTransactions(remainingTransactions);
+      }
     });
 
     row.append(date, payee, recurrence, description, notes, amount, editButton, removeButton);
