@@ -50,8 +50,13 @@ Open `index.html` directly in your browser for a basic offline experience (no pe
 - Click an account name to switch between them
 - Each account has its own separate transaction history
 - Click the **✎ (edit)** button to rename any account
-- Click the **×** button to delete accounts (not available for the main account)
-- The main account (first account) is protected from deletion
+- Click the **⭐ (star)** button on non-primary accounts to make them the primary account (moves them to the top)
+- Click the **×** button to delete accounts (only available for non-primary accounts)
+- The primary account (first account) is protected from deletion and cannot be switched with the "×" button
+
+### Settings
+- Click the **⚙ (gear)** icon in the accounts header to access app settings
+  - **Delete All Data**: Permanently deletes all accounts, transactions, and settings (requires typing "DELETE ALL" to confirm)
 
 ### Transactions
 1. Add transactions using date, payee, description, notes, amount, and recurrence.
