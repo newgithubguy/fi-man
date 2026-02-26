@@ -107,6 +107,68 @@ function dbAll(sql, params = []) {
   });
 }
 
+// Helper function to expand recurring transactions
+function expandRecurringTransactions(transactions, months = 12) {
+  const expanded = [];
+  const today = new Date();
+  const endDate = new Date(today);
+  endDate.setMonth(endDate.getMonth() + months);
+  
+  for (const txn of transactions) {
+    // Add the original transaction
+    expanded.push(txn);
+    
+    // If it has recurrence, generate future instances
+    if (txn.recurrence && txn.recurrence !== 'none') {
+      const startDate = new Date(txn.date + 'T00:00:00');
+      let currentDate = new Date(startDate);
+      
+      // Generate instances up to endDate
+      while (true) {
+        // Calculate next occurrence based on recurrence type
+        switch (txn.recurrence) {
+          case 'weekly':
+            currentDate.setDate(currentDate.getDate() + 7);
+            break;
+          case 'bi-weekly':
+            currentDate.setDate(currentDate.getDate() + 14);
+            break;
+          case 'monthly':
+            currentDate.setMonth(currentDate.getMonth() + 1);
+            break;
+          case 'quarterly':
+            currentDate.setMonth(currentDate.getMonth() + 3);
+            break;
+          case 'yearly':
+            currentDate.setFullYear(currentDate.getFullYear() + 1);
+            break;
+          default:
+            // Unknown recurrence type, skip
+            break;
+        }
+        
+        // Stop if we've gone beyond the end date
+        if (currentDate > endDate) break;
+        
+        // Create a new transaction instance
+        const recurringInstance = {
+          ...txn,
+          id: `${txn.id}-${currentDate.toISOString().split('T')[0]}`,
+          date: currentDate.toISOString().split('T')[0],
+          isRecurringInstance: true // Mark as generated instance
+        };
+        
+        expanded.push(recurringInstance);
+      }
+    }
+  }
+  
+  // Sort by date
+  expanded.sort((a, b) => a.date.localeCompare(b.date));
+  
+  return expanded;
+}
+
 // API Routes
 
 // Get all accounts
@@ -121,20 +183,27 @@ app.get('/api/accounts', async (req, res) => {
           'SELECT * FROM transactions WHERE account_id = ? ORDER BY date ASC',
           [account.id]
         );
+        
+        // Map transactions to camelCase
+        const mappedTransactions = transactions.map((txn) => ({
+          id: txn.id,
+          date: txn.date,
+          payee: txn.payee,
+          description: txn.description,
+          notes: txn.notes,
+          amount: txn.amount,
+          recurrence: txn.recurrence,
+          linkedTransactionId: txn.linked_transaction_id || null,
+          linkedAccountId: txn.linked_account_id || null,
+        }));
+        
+        // Expand recurring transactions
+        const expandedTransactions = expandRecurringTransactions(mappedTransactions);
+        
         return {
           id: account.id,
           name: account.name,
-          transactions: transactions.map((txn) => ({
-            id: txn.id,
-            date: txn.date,
-            payee: txn.payee,
-            description: txn.description,
-            notes: txn.notes,
-            amount: txn.amount,
-            recurrence: txn.recurrence,
-            linkedTransactionId: txn.linked_transaction_id || null,
-            linkedAccountId: txn.linked_account_id || null,
-          }))
+          transactions: expandedTransactions
         };
       })
     );

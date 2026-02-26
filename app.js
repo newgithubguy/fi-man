@@ -596,10 +596,16 @@ async function loadAccountsFromAPI() {
 
 async function saveAccountsToAPI() {
   try {
+    // Filter out generated recurring instances before saving
+    const accountsToSave = accounts.map(account => ({
+      ...account,
+      transactions: (account.transactions || []).filter(txn => !txn.isRecurringInstance)
+    }));
+    
     const response = await fetch(`${API_BASE_URL}/accounts`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(accounts)
+      body: JSON.stringify(accountsToSave)
     });
     if (!response.ok) {
       throw new Error('Failed to save accounts');
