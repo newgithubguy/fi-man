@@ -304,6 +304,19 @@
     </section>
   </div>
 
+  <div id="deleteRecurringModal" class="modal-backdrop" hidden aria-hidden="true">
+    <section class="modal-card" role="dialog" aria-modal="true" aria-labelledby="deleteRecurringTitle">
+      <h3 id="deleteRecurringTitle">Delete Recurring Transaction</h3>
+      <p id="deleteRecurringMessage">What would you like to delete?</p>
+      <div class="modal-actions" style="flex-direction: column; gap: 8px;">
+        <button id="deletePreviousBtn" type="button" style="background-color: #ff9800; color: white;">Delete All Previous (including this)</button>
+        <button id="deleteThisOnlyBtn" type="button" style="background-color: #2196f3; color: white;">Delete Only This Occurrence</button>
+        <button id="deleteFutureBtn" type="button" style="background-color: #d32f2f; color: white;">Delete All Future (including this)</button>
+        <button id="deleteRecurringCancel" type="button">Cancel</button>
+      </div>
+    </section>
+  </div>
+
   <script src="app.js"></script>
 </body>
 </html>

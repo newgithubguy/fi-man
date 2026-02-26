@@ -148,6 +148,94 @@ if (deleteAllConfirm) {
   });
 }
 
+// Recurring transaction deletion modal
+let pendingRecurringDelete = null; // Store the transaction being deleted
+const deleteRecurringModal = document.getElementById("deleteRecurringModal");
+const deletePreviousBtn = document.getElementById("deletePreviousBtn");
+const deleteThisOnlyBtn = document.getElementById("deleteThisOnlyBtn");
+const deleteFutureBtn = document.getElementById("deleteFutureBtn");
+const deleteRecurringCancel = document.getElementById("deleteRecurringCancel");
+
+function openDeleteRecurringModal(txn) {
+  pendingRecurringDelete = txn;
+  deleteRecurringModal.removeAttribute("hidden");
+  deleteRecurringModal.setAttribute("aria-hidden", "false");
+}
+
+function closeDeleteRecurringModal() {
+  deleteRecurringModal.setAttribute("hidden", "");
+  deleteRecurringModal.setAttribute("aria-hidden", "true");
+  pendingRecurringDelete = null;
+}
+
+if (deletePreviousBtn) {
+  deletePreviousBtn.addEventListener("click", () => {
+    if (!pendingRecurringDelete) return;
+    
+    const txnToDelete = pendingRecurringDelete;
+    
+    // Delete linked transaction if exists
+    if (txnToDelete.linkedTransactionId && txnToDelete.linkedAccountId) {
+      deleteLinkedTransaction(txnToDelete.linkedTransactionId, txnToDelete.linkedAccountId);
+    }
+    
+    // Delete original and all instances up to and including this date
+    const remainingTransactions = transactions.filter((tx) => {
+      // Keep if it's not the original
+      if (tx.id === txnToDelete.originalId) return false;
+      // Keep if it's not an instance of this recurring transaction
+      if (tx.originalId !== txnToDelete.originalId) return true;
+      // Keep if it's after this occurrence's date
+      return tx.date > txnToDelete.date;
+    });
+    
+    commitTransactions(remainingTransactions);
+    closeDeleteRecurringModal();
+  });
+}
+
+if (deleteThisOnlyBtn) {
+  deleteThisOnlyBtn.addEventListener("click", () => {
+    if (!pendingRecurringDelete) return;
+    
+    const txnToDelete = pendingRecurringDelete;
+    
+    // Delete linked transaction if exists
+    if (txnToDelete.linkedTransactionId && txnToDelete.linkedAccountId) {
+      deleteLinkedTransaction(txnToDelete.linkedTransactionId, txnToDelete.linkedAccountId);
+    }
+    
+    // Delete only this specific occurrence
+    const remainingTransactions = transactions.filter((tx) => tx.id !== txnToDelete.id);
+    commitTransactions(remainingTransactions);
+    closeDeleteRecurringModal();
+  });
+}
+
+if (deleteFutureBtn) {
+  deleteFutureBtn.addEventListener("click", () => {
+    if (!pendingRecurringDelete) return;
+    
+    const txnToDelete = pendingRecurringDelete;
+    
+    // Delete linked transaction if exists
+    if (txnToDelete.linkedTransactionId && txnToDelete.linkedAccountId) {
+      deleteLinkedTransaction(txnToDelete.linkedTransactionId, txnToDelete.linkedAccountId);
+    }
+    
+    // Delete this and all future occurrences - remove the original recurring transaction
+    const remainingTransactions = transactions.filter((tx) => tx.id !== txnToDelete.originalId && tx.originalId !== txnToDelete.originalId);
+    commitTransactions(remainingTransactions);
+    closeDeleteRecurringModal();
+  });
+}
+
+if (deleteRecurringCancel) {
+  deleteRecurringCancel.addEventListener("click", () => {
+    closeDeleteRecurringModal();
+  });
+}
+
 if (isTransferInput) {
   isTransferInput.addEventListener("change", () => {
     if (isTransferInput.checked) {
@@ -1510,26 +1598,8 @@ function renderTransactions() {
       
       // Handle recurring transaction deletion
       if (txnToDelete.isRecurring && txnToDelete.originalId) {
-        // This is a recurring instance - ask user what to do
-        const message = `Delete this occurrence only, or all future occurrences?\n\nYes = This occurrence only\nCancel = Never mind`;
-        const deleteThisOnly = confirm(message);
-        
-        if (deleteThisOnly === null) return; // User cancelled
-        
-        // Delete linked transaction if exists
-        if (txnToDelete.linkedTransactionId && txnToDelete.linkedAccountId) {
-          deleteLinkedTransaction(txnToDelete.linkedTransactionId, txnToDelete.linkedAccountId);
-        }
-        
-        if (deleteThisOnly) {
-          // Delete only this specific occurrence
-          const remainingTransactions = transactions.filter((tx) => tx.id !== idToUse);
-          commitTransactions(remainingTransactions);
-        } else {
-          // Delete this and all future occurrences - remove the original recurring transaction
-          const remainingTransactions = transactions.filter((tx) => tx.id !== txnToDelete.originalId && tx.originalId !== txnToDelete.originalId);
-          commitTransactions(remainingTransactions);
-        }
+        // This is a recurring instance - show modal with options
+        openDeleteRecurringModal(txnToDelete);
       } else {
         // Normal transaction or original recurring transaction - delete it
         if (txnToDelete.linkedTransactionId && txnToDelete.linkedAccountId) {
