@@ -1615,6 +1615,7 @@ function renderTransactions() {
   
   if (selectedDateKey) {
     // Get expanded transactions for a range around the selected date
+    const selectedDate = new Date(selectedDateKey);
     const expandStart = new Date(selectedDate);
     expandStart.setFullYear(expandStart.getFullYear() - 1);
     const expandEnd = new Date(selectedDate);
