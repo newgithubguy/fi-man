@@ -1538,6 +1538,7 @@ function renderCalendar() {
 
   const gridStart = new Date(year, month, 1 - startOffset);
   const dailyTotals = getDailyTotalsMap();
+  const todayKey = toDateKey(new Date());
 
   calendarGrid.innerHTML = "";
 
@@ -1564,6 +1565,9 @@ function renderCalendar() {
       day.classList.add("clickable-day");
       if (dateKey === selectedDateKey) {
         day.classList.add("selected-day");
+      }
+      if (dateKey === todayKey) {
+        day.classList.add("today");
       }
       day.tabIndex = 0;
       day.setAttribute("role", "button");

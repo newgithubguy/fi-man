@@ -390,6 +390,12 @@ body {
   background: #eff6ff;
 }
 
+.today {
+  border: 2px solid #ff6b6b;
+  background: #ffe8e8;
+  box-shadow: inset 0 0 8px rgba(255, 107, 107, 0.2);
+}
+
 .positive {
   color: var(--good);
 }
