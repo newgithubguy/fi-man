@@ -224,6 +224,7 @@
         <label>
           Date
           <input id="editDateInput" type="date" required />
+          <span id="editDateHint" class="field-hint" aria-live="polite"></span>
         </label>
         <label>
           Payee
@@ -232,10 +233,12 @@
         <label>
           Description
           <input id="editDescriptionInput" type="text" maxlength="80" placeholder="Groceries, Salary, Rent..." required />
+          <span id="editDescriptionHint" class="field-hint" aria-live="polite"></span>
         </label>
         <label>
           Amount
           <input id="editAmountInput" type="number" step="0.01" placeholder="Use negative for expenses" required />
+          <span id="editAmountHint" class="field-hint" aria-live="polite"></span>
         </label>
         <label>
           Recurrence

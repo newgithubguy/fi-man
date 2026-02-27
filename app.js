@@ -1,4 +1,4 @@
-const API_BASE_URL = '/api';
+const API_BASE_URL = window.location.protocol === "file:" ? "http://localhost:3000/api" : "/api";
 const IMPORT_NO_VALID_ROWS_MESSAGE = "No valid transactions found in the CSV file.";
 const IMPORT_READ_ERROR_MESSAGE = "Could not import this CSV file.";
 const TOAST_DURATION_MS = 3000;
@@ -56,9 +56,12 @@ const clearAllConfirm = document.getElementById("clearAllConfirm");
 const editTransactionModal = document.getElementById("editTransactionModal");
 const editTransactionForm = document.getElementById("editTransactionForm");
 const editDateInput = document.getElementById("editDateInput");
+const editDateHint = document.getElementById("editDateHint");
 const editPayeeInput = document.getElementById("editPayeeInput");
 const editDescriptionInput = document.getElementById("editDescriptionInput");
+const editDescriptionHint = document.getElementById("editDescriptionHint");
 const editAmountInput = document.getElementById("editAmountInput");
+const editAmountHint = document.getElementById("editAmountHint");
 const editRecurrenceInput = document.getElementById("editRecurrenceInput");
 const editNotesInput = document.getElementById("editNotesInput");
 const editCancel = document.getElementById("editCancel");
@@ -84,6 +87,7 @@ const calculatorDisplay = document.getElementById("calculatorDisplay");
 const calculatorKeys = document.getElementById("calculatorKeys");
 const calculatorToggle = document.getElementById("calculatorToggle");
 const calculatorBody = document.getElementById("calculatorBody");
+const graphLink = document.querySelector(".graph-link");
 
 // Account management
 let accounts = [];
@@ -424,6 +428,20 @@ if (calculatorKeys && calculatorDisplay) {
   });
 }
 
+if (graphLink) {
+  graphLink.addEventListener("click", async (event) => {
+    event.preventDefault();
+
+    try {
+      await persistChanges();
+    } catch (error) {
+      console.error("Error persisting changes before opening graph:", error);
+    }
+
+    window.location.href = graphLink.href;
+  });
+}
+
 document.getElementById("yearSelect").addEventListener("change", () => {
   const year = parseInt(yearSelect.value);
   const month = currentMonth.getMonth();
@@ -486,6 +504,30 @@ amountInput.addEventListener("input", () => {
 
 amountInput.addEventListener("blur", () => {
   setAmountValidationHint({ showRequiredWhenEmpty: true });
+});
+
+editAmountInput.addEventListener("input", () => {
+  setEditAmountValidationHint();
+});
+
+editAmountInput.addEventListener("blur", () => {
+  setEditAmountValidationHint({ showRequiredWhenEmpty: true });
+});
+
+editDateInput.addEventListener("change", () => {
+  setEditDateValidationHint();
+});
+
+editDateInput.addEventListener("blur", () => {
+  setEditDateValidationHint({ showRequiredWhenEmpty: true });
+});
+
+editDescriptionInput.addEventListener("input", () => {
+  setEditDescriptionValidationHint();
+});
+
+editDescriptionInput.addEventListener("blur", () => {
+  setEditDescriptionValidationHint({ showRequiredWhenEmpty: true });
 });
 
 dateInput.addEventListener("change", () => {
@@ -1678,7 +1720,7 @@ function renderTransactions() {
     amount.className = item.amount >= 0 ? "positive" : "negative";
 
     // Get the ID to use for operations
-    const idToUse = item.isRecurring ? item.originalId : item.id;
+    const idToUse = resolveBaseTransactionId(item.originalId || item.id);
     
     // Edit button (only for non-recurring instances)
     const editButton = document.createElement("button");
@@ -1953,6 +1995,21 @@ function getAccountNameById(accountId) {
   return account ? account.name : 'Unknown Account';
 }
 
+function resolveBaseTransactionId(transactionId) {
+  if (transactions.some((txn) => txn.id === transactionId)) {
+    return transactionId;
+  }
+
+  if (typeof transactionId === "string" && transactionId.includes("-recur-")) {
+    const [candidateId] = transactionId.split("-recur-");
+    if (candidateId && transactions.some((txn) => txn.id === candidateId)) {
+      return candidateId;
+    }
+  }
+
+  return transactionId;
+}
+
 function selectCalendarDate(dateKey) {
   selectedDateKey = dateKey;
   dateInput.value = dateKey;
@@ -1992,6 +2049,36 @@ function setDescriptionValidationHint(options = {}) {
   applyFieldValidationState({ input: descriptionInput, hint: descriptionHint, message });
 }
 
+function setEditDateValidationHint(options = {}) {
+  if (!editDateInput || !editDateHint) {
+    return "";
+  }
+
+  const showRequiredWhenEmpty = Boolean(options.showRequiredWhenEmpty);
+  const message = getDateValidationMessage({
+    dateValue: editDateInput.value,
+    showRequiredWhenEmpty,
+  });
+
+  applyFieldValidationState({ input: editDateInput, hint: editDateHint, message });
+  return message;
+}
+
+function setEditDescriptionValidationHint(options = {}) {
+  if (!editDescriptionInput || !editDescriptionHint) {
+    return "";
+  }
+
+  const showRequiredWhenEmpty = Boolean(options.showRequiredWhenEmpty);
+  const message = getDescriptionValidationMessage({
+    descriptionValue: editDescriptionInput.value,
+    showRequiredWhenEmpty,
+  });
+
+  applyFieldValidationState({ input: editDescriptionInput, hint: editDescriptionHint, message });
+  return message;
+}
+
 function getDescriptionValidationMessage({ descriptionValue, showRequiredWhenEmpty }) {
   if (!descriptionValue.trim()) {
     return showRequiredWhenEmpty ? "Description is required." : "";
@@ -2006,6 +2093,21 @@ function setAmountValidationHint(options = {}) {
     showRequiredWhenEmpty,
   });
   applyFieldValidationState({ input: amountInput, hint: amountHint, message });
+}
+
+function setEditAmountValidationHint(options = {}) {
+  if (!editAmountInput || !editAmountHint) {
+    return "";
+  }
+
+  const showRequiredWhenEmpty = Boolean(options.showRequiredWhenEmpty);
+  const message = getAmountValidationMessage({
+    rawAmountValue: editAmountInput.value,
+    showRequiredWhenEmpty,
+  });
+
+  applyFieldValidationState({ input: editAmountInput, hint: editAmountHint, message });
+  return message;
 }
 
 function getAmountValidationMessage({ rawAmountValue, showRequiredWhenEmpty }) {
@@ -2053,10 +2155,11 @@ function populateYearSelect() {
 }
 
 function openEditTransactionModal(transactionId) {
-  editingTransactionId = transactionId;
+  const resolvedTransactionId = resolveBaseTransactionId(transactionId);
+  editingTransactionId = resolvedTransactionId;
   
   // Find the transaction to edit
-  const txn = transactions.find(t => t.id === transactionId);
+  const txn = transactions.find(t => t.id === resolvedTransactionId);
   if (!txn) return;
   
   // Populate form fields
@@ -2064,6 +2167,9 @@ function openEditTransactionModal(transactionId) {
   editPayeeInput.value = txn.payee || '';
   editDescriptionInput.value = txn.description || '';
   editAmountInput.value = txn.amount;
+  setEditDateValidationHint();
+  setEditDescriptionValidationHint();
+  setEditAmountValidationHint();
   editRecurrenceInput.value = txn.recurrence || 'one-time';
   editNotesInput.value = txn.notes || '';
   
@@ -2095,6 +2201,32 @@ editTransactionForm.addEventListener("submit", (event) => {
   event.preventDefault();
   
   if (!editingTransactionId) return;
+
+  const editedDate = editDateInput.value;
+  const editedPayee = editPayeeInput.value.trim();
+  const editedDescription = editDescriptionInput.value.trim();
+  const editedNotes = editNotesInput.value.trim();
+  const editedRecurrence = editRecurrenceInput.value;
+  const editedAmount = Number(editAmountInput.value);
+
+  const editDateValidationMessage = setEditDateValidationHint({ showRequiredWhenEmpty: true });
+  const editDescriptionValidationMessage = setEditDescriptionValidationHint({ showRequiredWhenEmpty: true });
+  const editAmountValidationMessage = setEditAmountValidationHint({ showRequiredWhenEmpty: true });
+
+  if (editDateValidationMessage || editDescriptionValidationMessage || editAmountValidationMessage) {
+    if (editDateValidationMessage) {
+      editDateInput.focus();
+      return;
+    }
+
+    if (editDescriptionValidationMessage) {
+      editDescriptionInput.focus();
+      return;
+    }
+
+    editAmountInput.focus();
+    return;
+  }
   
   const txn = transactions.find(t => t.id === editingTransactionId);
   if (!txn) return;
