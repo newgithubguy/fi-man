@@ -31,6 +31,7 @@ services:
     environment:
       - TZ=UTC
       - NODE_ENV=production
+      - SESSION_SECRET=change-this-to-random-secret-in-production
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3000/"]
@@ -76,3 +77,35 @@ After rebuilding, hard refresh your browser:
 - Check container logs in Portainer
 - Verify ports map to 8080 -> 3000
 - If updates do not appear, rebuild with --no-cache
+
+## Authentication & Multi-User Setup
+
+The app now requires user authentication. Each user has their own isolated financial data.
+
+### First Time Access:
+
+1. Navigate to http://YOUR_MACHINE_IP:8080
+2. You'll be redirected to the login page
+3. Click "Register" to create the first account
+4. Enter a username and password (minimum 4 characters)
+
+### Adding More Users:
+
+- Each person registers their own account
+- All users access the same URL
+- Each user's data is completely isolated and private
+
+### Security Best Practices:
+
+**⚠️ Important:** Change the SESSION_SECRET to a random string:
+1. Go to Portainer → Stacks → finance-calendar → Editor
+2. Update SESSION_SECRET to a long random string (e.g., use a password generator)
+3. Click "Update the stack"
+
+**Note:** If using HTTPS/SSL, update the server.js session configuration to set `cookie.secure: true`
+
+### Data Migration:
+
+If you had data before adding authentication, it won't appear automatically. You can either:
+- Start fresh (delete volume and recreate)
+- Manually migrate data in the database to associate it with a user ID
