@@ -25,6 +25,16 @@ app.get('/favicon.ico', (req, res) => {
   res.status(204).end();
 });
 
+// Health check endpoint - useful for debugging
+app.get('/api/health', (req, res) => {
+  res.json({
+    status: 'ok',
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime(),
+    environment: process.env.NODE_ENV || 'development'
+  });
+});
+
 // Initialize SQLite database
 const db = new sqlite3.Database(DB_PATH, (err) => {
   if (err) {
@@ -430,8 +440,9 @@ app.delete('/api/clear-all', async (req, res) => {
 });
 
 // Start server
-app.listen(PORT, () => {
-  console.log(`Server running on http://localhost:${PORT}`);
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`Server running on http://0.0.0.0:${PORT}`);
+  console.log(`Access from other computers: http://<your-computer-ip>:${PORT}`);
 });
 
 // Graceful shutdown

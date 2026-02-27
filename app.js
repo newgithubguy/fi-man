@@ -757,7 +757,8 @@ async function loadAccountsFromAPI() {
   try {
     const response = await fetch(`${API_BASE_URL}/accounts`);
     if (!response.ok) {
-      throw new Error('Failed to load accounts');
+      const errorText = await response.text();
+      throw new Error(`API Error: ${response.status} - ${errorText}`);
     }
     const loadedAccounts = await response.json();
     return loadedAccounts.map((account) => ({
@@ -766,6 +767,11 @@ async function loadAccountsFromAPI() {
     }));
   } catch (error) {
     console.error('Error loading accounts:', error);
+    console.error('Failed to connect to API. Check that the server is running and accessible.');
+    showToast({ 
+      message: `Failed to load accounts: ${error.message}`, 
+      type: 'error'
+    });
     return [];
   }
 }
@@ -2158,6 +2164,23 @@ function focusEntryFieldAfterDatePick() {
 
 async function initialize() {
   try {
+    // Verify API connectivity first
+    console.log(`Attempting to connect to API at: ${API_BASE_URL}`);
+    try {
+      const healthCheck = await fetch(`${API_BASE_URL}/health`);
+      if (!healthCheck.ok) {
+        console.warn('Health check failed:', healthCheck.status);
+      } else {
+        console.log('API health check passed');
+      }
+    } catch (healthErr) {
+      console.error('API health check failed:', healthErr);
+      showToast({
+        message: `Cannot connect to server at ${API_BASE_URL}. Make sure the server is running.`,
+        type: 'error'
+      });
+    }
+    
     // Load accounts from API
     accounts = await loadAccountsFromAPI();
     
