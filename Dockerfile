@@ -1,12 +1,12 @@
-FROM node:18-alpine
+FROM node:20-bookworm-slim
 
 WORKDIR /app
 
 # Copy package files
 COPY package*.json ./
 
-# Install dependencies
-RUN npm install --production
+# Install production dependencies
+RUN npm ci --omit=dev
 
 # Copy application files
 COPY . .
@@ -19,6 +19,8 @@ EXPOSE 3000
 
 # Set environment to production
 ENV NODE_ENV=production
+ENV PORT=3000
+ENV DB_PATH=/data/finance.db
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \

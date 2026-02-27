@@ -8,8 +8,8 @@ const path = require('path');
 const fs = require('fs');
 
 const app = express();
-const PORT = 3000;
-const DB_PATH = '/data/finance.db';
+const PORT = Number.parseInt(process.env.PORT || '3000', 10);
+const DB_PATH = process.env.DB_PATH || '/data/finance.db';
 
 // Ensure data directory exists
 const dataDir = path.dirname(DB_PATH);

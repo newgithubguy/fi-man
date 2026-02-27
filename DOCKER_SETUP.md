@@ -89,7 +89,9 @@ docker build -t finance-calendar .
 # Run container
 docker run -d \
   --name finance-calendar \
-  -p 8080:80 \
+  -p 8080:3000 \
+  -e SESSION_SECRET=replace-with-a-long-random-secret \
+  -v finance-calendar-data:/data \
   --restart unless-stopped \
   finance-calendar
 ```
@@ -100,7 +102,7 @@ To use a different host port (e.g., 9090), edit docker-compose.yml:
 
 ```yaml
 ports:
-  - "9090:80"
+  - "9090:3000"
 ```
 
 Then rebuild and start again:
@@ -110,11 +112,6 @@ docker compose down
 docker compose build --no-cache
 docker compose up -d
 ```
-
-## Data Persistence
-
-Data is stored in each browser's localStorage. To back up:
-- Use Export CSV in the app
 
 ## Troubleshooting
 
