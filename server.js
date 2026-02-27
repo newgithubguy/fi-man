@@ -2,6 +2,8 @@ const express = require('express');
 const sqlite3 = require('sqlite3').verbose();
 const cors = require('cors');
 const bodyParser = require('body-parser');
+const session = require('express-session');
+const bcrypt = require('bcrypt');
 const path = require('path');
 const fs = require('fs');
 
@@ -16,8 +18,21 @@ if (!fs.existsSync(dataDir)) {
 }
 
 // Middleware
-app.use(cors());
+app.use(cors({
+  origin: true,
+  credentials: true
+}));
 app.use(bodyParser.json({ limit: '10mb' }));
+app.use(session({
+  secret: process.env.SESSION_SECRET || 'finance-calendar-secret-change-in-production',
+  resave: false,
+  saveUninitialized: false,
+  cookie: {
+    secure: false, // Set to true if using HTTPS
+    httpOnly: true,
+    maxAge: 1000 * 60 * 60 * 24 * 7 // 7 days
+  }
+}));
 app.use(express.static(path.join(__dirname)));
 
 // Handle favicon requests to prevent 404 errors
@@ -47,12 +62,24 @@ const db = new sqlite3.Database(DB_PATH, (err) => {
 
 function initializeDatabase() {
   db.serialize(() => {
+    // Create users table
+    db.run(`
+      CREATE TABLE IF NOT EXISTS users (
+        id TEXT PRIMARY KEY,
+        username TEXT UNIQUE NOT NULL,
+        password_hash TEXT NOT NULL,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
     // Create accounts table
     db.run(`
       CREATE TABLE IF NOT EXISTS accounts (
         id TEXT PRIMARY KEY,
+        user_id TEXT NOT NULL,
         name TEXT NOT NULL,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users(id)
       )
     `);
 
@@ -74,11 +101,13 @@ function initializeDatabase() {
       )
     `);
 
-    // Create active account table
+    // Create active account table (per user)
     db.run(`
       CREATE TABLE IF NOT EXISTS active_account (
-        key TEXT PRIMARY KEY,
-        value TEXT
+        user_id TEXT PRIMARY KEY,
+        account_id TEXT,
+        FOREIGN KEY (user_id) REFERENCES users(id),
+        FOREIGN KEY (account_id) REFERENCES accounts(id)
       )
     `);
 
@@ -230,12 +259,121 @@ function expandRecurringTransactions(transactions, months = 12) {
   return expanded;
 }
 
+// Authentication middleware
+function requireAuth(req, res, next) {
+  if (!req.session || !req.session.userId) {
+    return res.status(401).json({ error: 'Not authenticated' });
+  }
+  next();
+}
+
+// Helper to generate UUID
+function generateUuid() {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+    const r = Math.random() * 16 | 0;
+    const v = c === 'x' ? r : (r & 0x3 | 0x8);
+    return v.toString(16);
+  });
+}
+
+// Authentication Routes
+
+// Register
+app.post('/api/auth/register', async (req, res) => {
+  try {
+    const { username, password } = req.body;
+    
+    if (!username || !password) {
+      return res.status(400).json({ error: 'Username and password required' });
+    }
+    
+    if (password.length < 4) {
+      return res.status(400).json({ error: 'Password must be at least 4 characters' });
+    }
+    
+    // Check if user exists
+    const existing = await dbGet('SELECT id FROM users WHERE username = ?', [username]);
+    if (existing) {
+      return res.status(400).json({ error: 'Username already exists' });
+    }
+    
+    // Hash password
+    const passwordHash = await bcrypt.hash(password, 10);
+    const userId = generateUuid();
+    
+    // Create user
+    await dbRun('INSERT INTO users (id, username, password_hash) VALUES (?, ?, ?)', 
+      [userId, username, passwordHash]);
+    
+    // Create session
+    req.session.userId = userId;
+    req.session.username = username;
+    
+    res.json({ success: true, username });
+  } catch (error) {
+    console.error('Registration error:', error);
+    res.status(500).json({ error: 'Registration failed' });
+  }
+});
+
+// Login
+app.post('/api/auth/login', async (req, res) => {
+  try {
+    const { username, password } = req.body;
+    
+    if (!username || !password) {
+      return res.status(400).json({ error: 'Username and password required' });
+    }
+    
+    // Find user
+    const user = await dbGet('SELECT * FROM users WHERE username = ?', [username]);
+    if (!user) {
+      return res.status(401).json({ error: 'Invalid credentials' });
+    }
+    
+    // Verify password
+    const valid = await bcrypt.compare(password, user.password_hash);
+    if (!valid) {
+      return res.status(401).json({ error: 'Invalid credentials' });
+    }
+    
+    // Create session
+    req.session.userId = user.id;
+    req.session.username = user.username;
+    
+    res.json({ success: true, username: user.username });
+  } catch (error) {
+    console.error('Login error:', error);
+    res.status(500).json({ error: 'Login failed' });
+  }
+});
+
+// Logout
+app.post('/api/auth/logout', (req, res) => {
+  req.session.destroy((err) => {
+    if (err) {
+      return res.status(500).json({ error: 'Logout failed' });
+    }
+    res.json({ success: true });
+  });
+});
+
+// Check auth status
+app.get('/api/auth/status', (req, res) => {
+  if (req.session && req.session.userId) {
+    res.json({ authenticated: true, username: req.session.username });
+  } else {
+    res.json({ authenticated: false });
+  }
+});
+
 // API Routes
 
 // Get all accounts
-app.get('/api/accounts', async (req, res) => {
+app.get('/api/accounts', requireAuth, async (req, res) => {
   try {
-    const accounts = await dbAll('SELECT * FROM accounts ORDER BY created_at DESC');
+    const userId = req.session.userId;
+    const accounts = await dbAll('SELECT * FROM accounts WHERE user_id = ? ORDER BY created_at DESC', [userId]);
     
     // Fetch transactions for each account
     const accountsWithTransactions = await Promise.all(
@@ -277,8 +415,9 @@ app.get('/api/accounts', async (req, res) => {
 });
 
 // Create account or replace all accounts
-app.post('/api/accounts', async (req, res) => {
+app.post('/api/accounts', requireAuth, async (req, res) => {
   try {
+    const userId = req.session.userId;
     const payload = req.body;
     const accountsPayload = Array.isArray(payload) ? payload : [payload];
 
@@ -286,15 +425,16 @@ app.post('/api/accounts', async (req, res) => {
       return res.json({ success: true });
     }
 
-    await dbRun('DELETE FROM transactions');
-    await dbRun('DELETE FROM accounts');
+    // Delete only this user's data
+    await dbRun('DELETE FROM transactions WHERE account_id IN (SELECT id FROM accounts WHERE user_id = ?)', [userId]);
+    await dbRun('DELETE FROM accounts WHERE user_id = ?', [userId]);
 
     for (const account of accountsPayload) {
       if (!account || !account.id || !account.name) {
         continue;
       }
 
-      await dbRun('INSERT OR REPLACE INTO accounts (id, name) VALUES (?, ?)', [account.id, account.name]);
+      await dbRun('INSERT OR REPLACE INTO accounts (id, user_id, name) VALUES (?, ?, ?)', [account.id, userId, account.name]);
 
       for (const txn of account.transactions || []) {
         await dbRun(
@@ -325,9 +465,16 @@ app.post('/api/accounts', async (req, res) => {
 });
 
 // Save transactions
-app.post('/api/transactions', async (req, res) => {
+app.post('/api/transactions', requireAuth, async (req, res) => {
   try {
+    const userId = req.session.userId;
     const { accountId, transactions } = req.body;
+    
+    // Verify account belongs to user
+    const account = await dbGet('SELECT id FROM accounts WHERE id = ? AND user_id = ?', [accountId, userId]);
+    if (!account) {
+      return res.status(403).json({ error: 'Account not found or access denied' });
+    }
     
     // Clear existing transactions for this account
     await dbRun('DELETE FROM transactions WHERE account_id = ?', [accountId]);
@@ -350,10 +497,11 @@ app.post('/api/transactions', async (req, res) => {
 });
 
 // Get active account ID
-app.get('/api/active-account', async (req, res) => {
+app.get('/api/active-account', requireAuth, async (req, res) => {
   try {
-    const result = await dbGet('SELECT value FROM active_account WHERE key = ?', ['active_account_id']);
-    res.json({ activeAccountId: result?.value || null });
+    const userId = req.session.userId;
+    const result = await dbGet('SELECT account_id FROM active_account WHERE user_id = ?', [userId]);
+    res.json({ activeAccountId: result?.account_id || null });
   } catch (error) {
     console.error('Error fetching active account:', error);
     res.status(500).json({ error: 'Failed to fetch active account' });
@@ -361,13 +509,14 @@ app.get('/api/active-account', async (req, res) => {
 });
 
 // Set active account ID
-app.post('/api/active-account', async (req, res) => {
+app.post('/api/active-account', requireAuth, async (req, res) => {
   try {
+    const userId = req.session.userId;
     const { activeAccountId } = req.body;
     
     await dbRun(
-      'INSERT OR REPLACE INTO active_account (key, value) VALUES (?, ?)',
-      ['active_account_id', activeAccountId]
+      'INSERT OR REPLACE INTO active_account (user_id, account_id) VALUES (?, ?)',
+      [userId, activeAccountId]
     );
     
     res.json({ success: true });
@@ -378,9 +527,16 @@ app.post('/api/active-account', async (req, res) => {
 });
 
 // Get entry histories
-app.get('/api/entry-histories/:accountId', async (req, res) => {
+app.get('/api/entry-histories/:accountId', requireAuth, async (req, res) => {
   try {
+    const userId = req.session.userId;
     const { accountId } = req.params;
+    
+    // Verify account belongs to user
+    const account = await dbGet('SELECT id FROM accounts WHERE id = ? AND user_id = ?', [accountId, userId]);
+    if (!account) {
+      return res.status(403).json({ error: 'Account not found or access denied' });
+    }
     const payeeResult = await dbGet(
       'SELECT entries FROM entry_histories WHERE key = ? AND account_id = ?',
       [`payee-${accountId}`, accountId]
@@ -401,9 +557,16 @@ app.get('/api/entry-histories/:accountId', async (req, res) => {
 });
 
 // Save entry histories
-app.post('/api/entry-histories/:accountId', async (req, res) => {
+app.post('/api/entry-histories/:accountId', requireAuth, async (req, res) => {
   try {
+    const userId = req.session.userId;
     const { accountId } = req.params;
+    
+    // Verify account belongs to user
+    const account = await dbGet('SELECT id FROM accounts WHERE id = ? AND user_id = ?', [accountId, userId]);
+    if (!account) {
+      return res.status(403).json({ error: 'Account not found or access denied' });
+    }
     const { payees, descriptions } = req.body;
     
     await dbRun(
@@ -424,12 +587,13 @@ app.post('/api/entry-histories/:accountId', async (req, res) => {
 });
 
 // Clear all database data
-app.delete('/api/clear-all', async (req, res) => {
+app.delete('/api/clear-all', requireAuth, async (req, res) => {
   try {
-    await dbRun('DELETE FROM transactions');
-    await dbRun('DELETE FROM accounts');
-    await dbRun('DELETE FROM active_account');
-    await dbRun('DELETE FROM entry_histories');
+    const userId = req.session.userId;
+    await dbRun('DELETE FROM transactions WHERE account_id IN (SELECT id FROM accounts WHERE user_id = ?)', [userId]);
+    await dbRun('DELETE FROM accounts WHERE user_id = ?', [userId]);
+    await dbRun('DELETE FROM active_account WHERE user_id = ?', [userId]);
+    await dbRun('DELETE FROM entry_histories WHERE account_id IN (SELECT id FROM accounts WHERE user_id = ?)', [userId]);
     
     console.log('Database cleared successfully');
     res.json({ success: true, message: 'All data cleared' });

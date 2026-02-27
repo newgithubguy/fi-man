@@ -109,6 +109,28 @@ if (addAccountBtn) {
   addAccountBtn.addEventListener("click", addAccount);
 }
 
+// Logout button
+const logoutBtn = document.getElementById("logoutBtn");
+if (logoutBtn) {
+  logoutBtn.addEventListener("click", async () => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/auth/logout`, {
+        method: 'POST',
+        credentials: 'include'
+      });
+      
+      if (response.ok) {
+        window.location.href = '/login.html';
+      } else {
+        showToast({ message: 'Logout failed', type: 'error' });
+      }
+    } catch (error) {
+      console.error('Logout error:', error);
+      showToast({ message: 'Logout failed', type: 'error' });
+    }
+  });
+}
+
 // Settings button and Delete All modal
 const settingsBtn = document.getElementById("settingsBtn");
 const deleteAllDataModal = document.getElementById("deleteAllDataModal");
@@ -755,7 +777,9 @@ function loadTransactions() {
 
 async function loadAccountsFromAPI() {
   try {
-    const response = await fetch(`${API_BASE_URL}/accounts`);
+    const response = await fetch(`${API_BASE_URL}/accounts`, {
+      credentials: 'include'
+    });
     if (!response.ok) {
       const errorText = await response.text();
       throw new Error(`API Error: ${response.status} - ${errorText}`);
@@ -787,7 +811,8 @@ async function saveAccountsToAPI() {
     const response = await fetch(`${API_BASE_URL}/accounts`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(accountsToSave)
+      body: JSON.stringify(accountsToSave),
+      credentials: 'include'
     });
     if (!response.ok) {
       throw new Error('Failed to save accounts');
@@ -800,7 +825,9 @@ async function saveAccountsToAPI() {
 
 async function loadActiveAccountIdFromAPI() {
   try {
-    const response = await fetch(`${API_BASE_URL}/active-account`);
+    const response = await fetch(`${API_BASE_URL}/active-account`, {
+      credentials: 'include'
+    });
     if (!response.ok) {
       throw new Error('Failed to load active account');
     }
@@ -817,7 +844,8 @@ async function saveActiveAccountIdToAPI() {
     const response = await fetch(`${API_BASE_URL}/active-account`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ activeAccountId })
+      body: JSON.stringify({ activeAccountId }),
+      credentials: 'include'
     });
     if (!response.ok) {
       throw new Error('Failed to save active account');
@@ -837,7 +865,8 @@ async function persistTransactionsToAPI() {
       const response = await fetch(`${API_BASE_URL}/transactions`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ accountId: activeAccountId, transactions: cleanedTransactions })
+        body: JSON.stringify({ accountId: activeAccountId, transactions: cleanedTransactions }),
+        credentials: 'include'
       });
       if (!response.ok) {
         throw new Error('Failed to save transactions');
@@ -873,7 +902,9 @@ function persistTransactions() {
 async function loadEntryHistories() {
   try {
     if (!activeAccountId) return;
-    const response = await fetch(`${API_BASE_URL}/entry-histories/${activeAccountId}`);
+    const response = await fetch(`${API_BASE_URL}/entry-histories/${activeAccountId}`, {
+      credentials: 'include'
+    });
     if (!response.ok) throw new Error('Failed to load entry histories');
     const data = await response.json();
     payeeHistory = data.payees || [];
@@ -891,7 +922,8 @@ async function saveEntryHistories() {
     const response = await fetch(`${API_BASE_URL}/entry-histories/${activeAccountId}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ payees: payeeHistory, descriptions: descriptionHistory })
+      body: JSON.stringify({ payees: payeeHistory, descriptions: descriptionHistory }),
+      credentials: 'include'
     });
     if (!response.ok) throw new Error('Failed to save entry histories');
   } catch (error) {
@@ -1838,7 +1870,8 @@ async function deleteAllData() {
   try {
     // Clear database on server
     const response = await fetch(`${API_BASE_URL}/clear-all`, {
-      method: 'DELETE'
+      method: 'DELETE',
+      credentials: 'include'
     });
     
     if (!response.ok) {
@@ -2164,6 +2197,23 @@ function focusEntryFieldAfterDatePick() {
 
 async function initialize() {
   try {
+    // Check authentication first
+    const authResponse = await fetch(`${API_BASE_URL}/auth/status`, {
+      credentials: 'include'
+    });
+    const authData = await authResponse.json();
+    
+    if (!authData.authenticated) {
+      window.location.href = '/login.html';
+      return;
+    }
+    
+    // Display username
+    const usernameDisplay = document.getElementById('usernameDisplay');
+    if (usernameDisplay) {
+      usernameDisplay.textContent = `Logged in as: ${authData.username}`;
+    }
+    
     // Verify API connectivity first
     console.log(`Attempting to connect to API at: ${API_BASE_URL}`);
     try {

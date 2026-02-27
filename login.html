@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Login - Finance Calendar</title>
+  <link rel="stylesheet" href="styles.css" />
+  <style>
+    .login-container {
+      max-width: 400px;
+      margin: 100px auto;
+      padding: 2rem;
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    .login-header {
+      text-align: center;
+      margin-bottom: 2rem;
+    }
+    .login-header h1 {
+      margin: 0 0 0.5rem 0;
+      color: #333;
+    }
+    .login-header p {
+      margin: 0;
+      color: #666;
+      font-size: 0.9rem;
+    }
+    .login-form {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+    .form-group label {
+      font-weight: 500;
+      color: #333;
+    }
+    .form-group input {
+      padding: 0.75rem;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      font-size: 1rem;
+    }
+    .form-group input:focus {
+      outline: none;
+      border-color: #4CAF50;
+    }
+    .btn-primary {
+      padding: 0.75rem;
+      background: #4CAF50;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      font-size: 1rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .btn-primary:hover {
+      background: #45a049;
+    }
+    .btn-primary:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+    }
+    .form-toggle {
+      text-align: center;
+      margin-top: 1rem;
+      color: #666;
+    }
+    .form-toggle a {
+      color: #4CAF50;
+      cursor: pointer;
+      text-decoration: none;
+    }
+    .form-toggle a:hover {
+      text-decoration: underline;
+    }
+    .error-message {
+      padding: 0.75rem;
+      background: #ffebee;
+      color: #c62828;
+      border-radius: 4px;
+      font-size: 0.9rem;
+      margin-bottom: 1rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="login-container">
+    <div class="login-header">
+      <h1>Finance Calendar</h1>
+      <p id="formTitle">Login to your account</p>
+    </div>
+    
+    <div id="errorMessage" class="error-message" style="display: none;"></div>
+    
+    <form id="authForm" class="login-form">
+      <div class="form-group">
+        <label for="username">Username</label>
+        <input type="text" id="username" name="username" required autocomplete="username" />
+      </div>
+      
+      <div class="form-group">
+        <label for="password">Password</label>
+        <input type="password" id="password" name="password" required autocomplete="current-password" minlength="4" />
+      </div>
+      
+      <button type="submit" class="btn-primary" id="submitBtn">Login</button>
+    </form>
+    
+    <div class="form-toggle">
+      <span id="toggleText">Don't have an account?</span>
+      <a id="toggleLink">Register</a>
+    </div>
+  </div>
+
+  <script>
+    const API_BASE_URL = '/api';
+    const authForm = document.getElementById('authForm');
+    const usernameInput = document.getElementById('username');
+    const passwordInput = document.getElementById('password');
+    const submitBtn = document.getElementById('submitBtn');
+    const formTitle = document.getElementById('formTitle');
+    const toggleText = document.getElementById('toggleText');
+    const toggleLink = document.getElementById('toggleLink');
+    const errorMessage = document.getElementById('errorMessage');
+    
+    let isLoginMode = true;
+    
+    // Check if already authenticated
+    async function checkAuth() {
+      try {
+        const response = await fetch(`${API_BASE_URL}/auth/status`, {
+          credentials: 'include'
+        });
+        const data = await response.json();
+        if (data.authenticated) {
+          window.location.href = '/index.html';
+        }
+      } catch (error) {
+        console.error('Auth check failed:', error);
+      }
+    }
+    
+    checkAuth();
+    
+    // Toggle between login and register
+    toggleLink.addEventListener('click', (e) => {
+      e.preventDefault();
+      isLoginMode = !isLoginMode;
+      
+      if (isLoginMode) {
+        formTitle.textContent = 'Login to your account';
+        submitBtn.textContent = 'Login';
+        toggleText.textContent = "Don't have an account?";
+        toggleLink.textContent = 'Register';
+        passwordInput.setAttribute('autocomplete', 'current-password');
+      } else {
+        formTitle.textContent = 'Create new account';
+        submitBtn.textContent = 'Register';
+        toggleText.textContent = 'Already have an account?';
+        toggleLink.textContent = 'Login';
+        passwordInput.setAttribute('autocomplete', 'new-password');
+      }
+      
+      hideError();
+    });
+    
+    // Handle form submission
+    authForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      const username = usernameInput.value.trim();
+      const password = passwordInput.value;
+      
+      if (!username || !password) {
+        showError('Please fill in all fields');
+        return;
+      }
+      
+      if (password.length < 4) {
+        showError('Password must be at least 4 characters');
+        return;
+      }
+      
+      submitBtn.disabled = true;
+      hideError();
+      
+      try {
+        const endpoint = isLoginMode ? '/auth/login' : '/auth/register';
+        const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, password }),
+          credentials: 'include'
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok && data.success) {
+          // Redirect to main app
+          window.location.href = '/index.html';
+        } else {
+          showError(data.error || 'Authentication failed');
+          submitBtn.disabled = false;
+        }
+      } catch (error) {
+        console.error('Auth error:', error);
+        showError('Connection error. Please try again.');
+        submitBtn.disabled = false;
+      }
+    });
+    
+    function showError(message) {
+      errorMessage.textContent = message;
+      errorMessage.style.display = 'block';
+    }
+    
+    function hideError() {
+      errorMessage.style.display = 'none';
+    }
+  </script>
+</body>
+</html>
