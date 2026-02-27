@@ -2189,8 +2189,11 @@ function openEditTransactionModal(transactionId) {
   editDateInput.focus();
 }
 
-function closeEditTransactionModal() {
-  editingTransactionId = null;
+function closeEditTransactionModal(options = {}) {
+  const keepEditingTransactionId = Boolean(options.keepEditingTransactionId);
+  if (!keepEditingTransactionId) {
+    editingTransactionId = null;
+  }
   editTransactionModal.hidden = true;
   editTransactionModal.setAttribute('aria-hidden', 'true');
 }
@@ -2249,7 +2252,7 @@ editTransactionForm.addEventListener("submit", (event) => {
 
   // If recurring, show the modal to ask how to apply changes
   if (isRecurring) {
-    closeEditTransactionModal();
+    closeEditTransactionModal({ keepEditingTransactionId: true });
     editRecurringModal.hidden = false;
     editRecurringModal.setAttribute('aria-hidden', 'false');
     return;
@@ -2264,6 +2267,7 @@ if (editRecurringCancel) {
   editRecurringCancel.addEventListener('click', () => {
     editRecurringModal.hidden = true;
     editRecurringModal.setAttribute('aria-hidden', 'true');
+    editingTransactionId = null;
     pendingEditData = null;
   });
 }
