@@ -32,6 +32,9 @@ body {
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
+  position: sticky;
+  top: 0;
+  max-height: 100vh;
 }
 
 .accounts-header {
@@ -1098,5 +1101,7 @@ body {
     border-right: none;
     border-bottom: 2px solid var(--border);
     max-height: 320px;
+    position: sticky;
+    top: 0;
   }
 }
