@@ -1615,7 +1615,6 @@ function renderTransactions() {
   
   if (selectedDateKey) {
     // Get expanded transactions for a range around the selected date
-      .filter((entry) => entry && !entry.isRecurringInstance && entry.date && entry.description && Number.isFinite(Number(entry.amount)))
     const expandStart = new Date(selectedDate);
     expandStart.setFullYear(expandStart.getFullYear() - 1);
     const expandEnd = new Date(selectedDate);
