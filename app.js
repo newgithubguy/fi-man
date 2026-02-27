@@ -62,6 +62,10 @@ const editAmountInput = document.getElementById("editAmountInput");
 const editRecurrenceInput = document.getElementById("editRecurrenceInput");
 const editNotesInput = document.getElementById("editNotesInput");
 const editCancel = document.getElementById("editCancel");
+const editRecurringModal = document.getElementById("editRecurringModal");
+const editAllOccurrencesBtn = document.getElementById("editAllOccurrencesBtn");
+const editThisOnlyBtn = document.getElementById("editThisOnlyBtn");
+const editRecurringCancel = document.getElementById("editRecurringCancel");
 const exportDateRangeModal = document.getElementById("exportDateRangeModal");
 const exportDateRangeForm = document.getElementById("exportDateRangeForm");
 const exportFromDate = document.getElementById("exportFromDate");
@@ -94,6 +98,7 @@ let currentMonth = new Date();
 currentMonth.setDate(1);
 let selectedDateKey = toDateKey(new Date());
 let editingTransactionId = null;
+let pendingEditData = null;
 
 document.getElementById("prevMonth").addEventListener("click", () => {
   currentMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1);
@@ -2089,96 +2094,301 @@ editTransactionForm.addEventListener("submit", (event) => {
   
   const txn = transactions.find(t => t.id === editingTransactionId);
   if (!txn) return;
+
+  // Check if this is a recurring transaction
+  const isRecurring = txn.recurrence && txn.recurrence !== 'one-time' && txn.recurrence !== 'none';
   
-  const wasLinked = Boolean(txn.linkedTransactionId && txn.linkedAccountId);
-  const isTransfer = editIsTransferInput.checked;
-  const transferToAccountId = editTransferAccountInput.value;
-  
-  // Handle unlinking
-  if (wasLinked && !isTransfer) {
-    deleteLinkedTransaction(txn.linkedTransactionId, txn.linkedAccountId);
-    txn.linkedTransactionId = null;
-    txn.linkedAccountId = null;
+  // Collect form data
+  pendingEditData = {
+    date: editDateInput.value,
+    payee: editPayeeInput.value.trim(),
+    description: editDescriptionInput.value.trim(),
+    amount: Number(editAmountInput.value),
+    recurrence: editRecurrenceInput.value,
+    notes: editNotesInput.value.trim(),
+    isTransfer: editIsTransferInput.checked,
+    transferToAccountId: editTransferAccountInput.value,
+    wasLinked: Boolean(txn.linkedTransactionId && txn.linkedAccountId)
+  };
+
+  // If recurring, show the modal to ask how to apply changes
+  if (isRecurring) {
+    closeEditTransactionModal();
+    editRecurringModal.hidden = false;
+    editRecurringModal.setAttribute('aria-hidden', 'false');
+    return;
   }
   
-  // Handle new linking
-  if (!wasLinked && isTransfer) {
-    if (!transferToAccountId) {
-      alert("Please select an account to transfer to.");
-      return;
-    }
-    const linkedId = generateUuid();
-    txn.linkedTransactionId = linkedId;
-    txn.linkedAccountId = transferToAccountId;
+  // Otherwise, apply the edit directly
+  applyEditToTransaction(editingTransactionId, pendingEditData, false);
+});
+
+// Modal handlers for editing recurring transactions
+if (editRecurringCancel) {
+  editRecurringCancel.addEventListener('click', () => {
+    editRecurringModal.hidden = true;
+    editRecurringModal.setAttribute('aria-hidden', 'true');
+    pendingEditData = null;
+  });
+}
+
+if (editAllOccurrencesBtn) {
+  editAllOccurrencesBtn.addEventListener('click', () => {
+    editRecurringModal.hidden = true;
+    editRecurringModal.setAttribute('aria-hidden', 'true');
+    applyEditToTransaction(editingTransactionId, pendingEditData, true);
+  });
+}
+
+if (editThisOnlyBtn) {
+  editThisOnlyBtn.addEventListener('click', () => {
+    editRecurringModal.hidden = true;
+    editRecurringModal.setAttribute('aria-hidden', 'true');
+    applyEditToTransaction(editingTransactionId, pendingEditData, false);
+  });
+}
+
+// Function to apply edit to transaction(s)
+function applyEditToTransaction(transactionId, editData, applyToAll) {
+  const txn = transactions.find(t => t.id === transactionId);
+  if (!txn) return;
+  
+  const wasLinked = editData.wasLinked;
+  const isTransfer = editData.isTransfer;
+  const transferToAccountId = editData.transferToAccountId;
+  
+  // If applyToAll is true and it's a recurring transaction, update the base transaction
+  // which will affect all future generated instances
+  if (applyToAll) {
+    // Find the base recurring transaction (the one without isRecurringInstance flag)
+    const baseId = txn.isRecurringInstance ? txn.id.split('-')[0] : txn.id;
+    const baseTxn = transactions.find(t => t.id === baseId && !t.isRecurringInstance);
     
-    const targetAccount = accounts.find(acc => acc.id === transferToAccountId);
-    if (targetAccount) {
-      const linkedTransaction = {
-        id: linkedId,
-        date: editDateInput.value,
-        description: editDescriptionInput.value.trim(),
-        payee: editPayeeInput.value.trim(),
-        notes: editNotesInput.value.trim(),
-        amount: -Number(editAmountInput.value),
-        recurrence: editRecurrenceInput.value,
-        linkedTransactionId: txn.id,
-        linkedAccountId: activeAccountId,
+    if (baseTxn) {
+      // Handle unlinking
+      if (wasLinked && !isTransfer) {
+        deleteLinkedTransaction(baseTxn.linkedTransactionId, baseTxn.linkedAccountId);
+        baseTxn.linkedTransactionId = null;
+        baseTxn.linkedAccountId = null;
+      }
+      
+      // Handle new linking
+      if (!wasLinked && isTransfer) {
+        if (!transferToAccountId) {
+          alert("Please select an account to transfer to.");
+          return;
+        }
+        const linkedId = generateUuid();
+        baseTxn.linkedTransactionId = linkedId;
+        baseTxn.linkedAccountId = transferToAccountId;
+        
+        const targetAccount = accounts.find(acc => acc.id === transferToAccountId);
+        if (targetAccount) {
+          const linkedTransaction = {
+            id: linkedId,
+            date: editData.date,
+            description: editData.description,
+            payee: editData.payee,
+            notes: editData.notes,
+            amount: -editData.amount,
+            recurrence: editData.recurrence,
+            linkedTransactionId: baseTxn.id,
+            linkedAccountId: activeAccountId,
+          };
+          targetAccount.transactions = targetAccount.transactions || [];
+          targetAccount.transactions.push(linkedTransaction);
+          saveAccounts();
+        }
+      }
+      
+      // Handle change in linked account
+      if (wasLinked && isTransfer && baseTxn.linkedAccountId !== transferToAccountId) {
+        deleteLinkedTransaction(baseTxn.linkedTransactionId, baseTxn.linkedAccountId);
+        
+        const linkedId = generateUuid();
+        baseTxn.linkedTransactionId = linkedId;
+        baseTxn.linkedAccountId = transferToAccountId;
+        
+        const targetAccount = accounts.find(acc => acc.id === transferToAccountId);
+        if (targetAccount) {
+          const linkedTransaction = {
+            id: linkedId,
+            date: editData.date,
+            description: editData.description,
+            payee: editData.payee,
+            notes: editData.notes,
+            amount: -editData.amount,
+            recurrence: editData.recurrence,
+            linkedTransactionId: baseTxn.id,
+            linkedAccountId: activeAccountId,
+          };
+          targetAccount.transactions = targetAccount.transactions || [];
+          targetAccount.transactions.push(linkedTransaction);
+          saveAccounts();
+        }
+      }
+      
+      // Update base transaction properties
+      baseTxn.date = editData.date;
+      baseTxn.payee = editData.payee;
+      baseTxn.description = editData.description;
+      baseTxn.amount = editData.amount;
+      baseTxn.recurrence = editData.recurrence;
+      baseTxn.notes = editData.notes;
+      
+      // Update linked transaction if it exists
+      if (baseTxn.linkedTransactionId && baseTxn.linkedAccountId) {
+        updateLinkedTransaction(baseTxn);
+      }
+    }
+  } else {
+    // Apply to this occurrence only - create exclusion for recurring instances
+    if (txn.isRecurringInstance) {
+      // Find the base transaction
+      const baseId = txn.id.split('-')[0];
+      const baseTxn = transactions.find(t => t.id === baseId && !t.isRecurringInstance);
+      
+      if (baseTxn) {
+        // Add this date to excluded dates
+        if (!baseTxn.excludedDates) {
+          baseTxn.excludedDates = [];
+        }
+        if (!baseTxn.excludedDates.includes(txn.date)) {
+          baseTxn.excludedDates.push(txn.date);
+        }
+      }
+      
+      // Create a new one-time transaction with the edited values
+      const newTxn = {
+        id: generateUuid(),
+        date: editData.date,
+        payee: editData.payee,
+        description: editData.description,
+        amount: editData.amount,
+        recurrence: 'one-time',
+        notes: editData.notes
       };
-      targetAccount.transactions = targetAccount.transactions || [];
-      targetAccount.transactions.push(linkedTransaction);
-      saveAccounts();
+      
+      // Handle transfer for new transaction
+      if (isTransfer) {
+        if (!transferToAccountId) {
+          alert("Please select an account to transfer to.");
+          return;
+        }
+        const linkedId = generateUuid();
+        newTxn.linkedTransactionId = linkedId;
+        newTxn.linkedAccountId = transferToAccountId;
+        
+        const targetAccount = accounts.find(acc => acc.id === transferToAccountId);
+        if (targetAccount) {
+          const linkedTransaction = {
+            id: linkedId,
+            date: editData.date,
+            description: editData.description,
+            payee: editData.payee,
+            notes: editData.notes,
+            amount: -editData.amount,
+            recurrence: 'one-time',
+            linkedTransactionId: newTxn.id,
+            linkedAccountId: activeAccountId,
+          };
+          targetAccount.transactions = targetAccount.transactions || [];
+          targetAccount.transactions.push(linkedTransaction);
+          saveAccounts();
+        }
+      }
+      
+      transactions.push(newTxn);
+    } else {
+      // It's a base recurring transaction, just update it directly
+      // Handle unlinking
+      if (wasLinked && !isTransfer) {
+        deleteLinkedTransaction(txn.linkedTransactionId, txn.linkedAccountId);
+        txn.linkedTransactionId = null;
+        txn.linkedAccountId = null;
+      }
+      
+      // Handle new linking
+      if (!wasLinked && isTransfer) {
+        if (!transferToAccountId) {
+          alert("Please select an account to transfer to.");
+          return;
+        }
+        const linkedId = generateUuid();
+        txn.linkedTransactionId = linkedId;
+        txn.linkedAccountId = transferToAccountId;
+        
+        const targetAccount = accounts.find(acc => acc.id === transferToAccountId);
+        if (targetAccount) {
+          const linkedTransaction = {
+            id: linkedId,
+            date: editData.date,
+            description: editData.description,
+            payee: editData.payee,
+            notes: editData.notes,
+            amount: -editData.amount,
+            recurrence: editData.recurrence,
+            linkedTransactionId: txn.id,
+            linkedAccountId: activeAccountId,
+          };
+          targetAccount.transactions = targetAccount.transactions || [];
+          targetAccount.transactions.push(linkedTransaction);
+          saveAccounts();
+        }
+      }
+      
+      // Handle change in linked account
+      if (wasLinked && isTransfer && txn.linkedAccountId !== transferToAccountId) {
+        deleteLinkedTransaction(txn.linkedTransactionId, txn.linkedAccountId);
+        
+        const linkedId = generateUuid();
+        txn.linkedTransactionId = linkedId;
+        txn.linkedAccountId = transferToAccountId;
+        
+        const targetAccount = accounts.find(acc => acc.id === transferToAccountId);
+        if (targetAccount) {
+          const linkedTransaction = {
+            id: linkedId,
+            date: editData.date,
+            description: editData.description,
+            payee: editData.payee,
+            notes: editData.notes,
+            amount: -editData.amount,
+            recurrence: editData.recurrence,
+            linkedTransactionId: txn.id,
+            linkedAccountId: activeAccountId,
+          };
+          targetAccount.transactions = targetAccount.transactions || [];
+          targetAccount.transactions.push(linkedTransaction);
+          saveAccounts();
+        }
+      }
+      
+      // Update transaction properties
+      txn.date = editData.date;
+      txn.payee = editData.payee;
+      txn.description = editData.description;
+      txn.amount = editData.amount;
+      txn.recurrence = editData.recurrence;
+      txn.notes = editData.notes;
+      
+      // Update linked transaction if it exists
+      if (txn.linkedTransactionId && txn.linkedAccountId) {
+        updateLinkedTransaction(txn);
+      }
     }
   }
-  
-  // Handle change in linked account
-  if (wasLinked && isTransfer && txn.linkedAccountId !== transferToAccountId) {
-    deleteLinkedTransaction(txn.linkedTransactionId, txn.linkedAccountId);
-    
-    const linkedId = generateUuid();
-    txn.linkedTransactionId = linkedId;
-    txn.linkedAccountId = transferToAccountId;
-    
-    const targetAccount = accounts.find(acc => acc.id === transferToAccountId);
-    if (targetAccount) {
-      const linkedTransaction = {
-        id: linkedId,
-        date: editDateInput.value,
-        description: editDescriptionInput.value.trim(),
-        payee: editPayeeInput.value.trim(),
-        notes: editNotesInput.value.trim(),
-        amount: -Number(editAmountInput.value),
-        recurrence: editRecurrenceInput.value,
-        linkedTransactionId: txn.id,
-        linkedAccountId: activeAccountId,
-      };
-      targetAccount.transactions = targetAccount.transactions || [];
-      targetAccount.transactions.push(linkedTransaction);
-      saveAccounts();
-    }
-  }
-  
-  // Update transaction properties
-  txn.date = editDateInput.value;
-  txn.payee = editPayeeInput.value.trim();
-  txn.description = editDescriptionInput.value.trim();
-  txn.amount = Number(editAmountInput.value);
-  txn.recurrence = editRecurrenceInput.value;
-  txn.notes = editNotesInput.value.trim();
   
   // Track payee and description in history
-  if (txn.payee) payeeHistory = addToHistory(txn.payee, payeeHistory);
-  if (txn.description) descriptionHistory = addToHistory(txn.description, descriptionHistory);
+  if (editData.payee) payeeHistory = addToHistory(editData.payee, payeeHistory);
+  if (editData.description) descriptionHistory = addToHistory(editData.description, descriptionHistory);
   saveEntryHistories();
-  
-  // Update linked transaction if it exists
-  if (txn.linkedTransactionId && txn.linkedAccountId) {
-    updateLinkedTransaction(txn);
-  }
   
   commitTransactions(transactions);
   closeEditTransactionModal();
   showToast({ message: "Transaction updated successfully.", type: "success" });
-});
+  pendingEditData = null;
+}
 
 // Initialize
 // Initialize

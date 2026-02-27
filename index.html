@@ -324,6 +324,18 @@
     </section>
   </div>
 
+  <div id="editRecurringModal" class="modal-backdrop" hidden aria-hidden="true">
+    <section class="modal-card" role="dialog" aria-modal="true" aria-labelledby="editRecurringTitle">
+      <h3 id="editRecurringTitle">Edit Recurring Transaction</h3>
+      <p>Do you want to apply these changes to all occurrences or just this one?</p>
+      <div class="modal-actions" style="flex-direction: column; gap: 8px;">
+        <button id="editAllOccurrencesBtn" type="button" style="background-color: #2196f3; color: white;">Apply to All Occurrences</button>
+        <button id="editThisOnlyBtn" type="button" style="background-color: #ff9800; color: white;">Apply to This Occurrence Only</button>
+        <button id="editRecurringCancel" type="button">Cancel</button>
+      </div>
+    </section>
+  </div>
+
   <script src="app.js"></script>
 </body>
 </html>
