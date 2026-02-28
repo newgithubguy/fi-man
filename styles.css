@@ -248,6 +248,10 @@ body {
   width: 100%;
 }
 
+.controls.card {
+  max-width: 1400px;
+}
+
 .month-controls {
   display: flex;
   align-items: center;
@@ -487,7 +491,7 @@ body {
 
 .calendar-workspace.layout-bottom .calendar,
 .calendar-workspace.layout-bottom .workspace-panels {
-  width: min(1100px, 100%);
+  width: 100%;
   justify-self: start;
 }
 
