@@ -33,6 +33,9 @@ const notesInput = document.getElementById("notesInput");
 const amountInput = document.getElementById("amountInput");
 const amountHint = document.getElementById("amountHint");
 const recurrenceInput = document.getElementById("recurrenceInput");
+const recurrenceEndDateInput = document.getElementById("recurrenceEndDateInput");
+const recurrenceEndDateHint = document.getElementById("recurrenceEndDateHint");
+const recurrenceEndDateLabel = document.getElementById("recurrenceEndDateLabel");
 const transactionList = document.getElementById("transactionList");
 const transactionListTitle = document.getElementById("transactionListTitle");
 const monthChangeDisplay = document.getElementById("monthChangeDisplay");
@@ -74,6 +77,9 @@ const editDescriptionHint = document.getElementById("editDescriptionHint");
 const editAmountInput = document.getElementById("editAmountInput");
 const editAmountHint = document.getElementById("editAmountHint");
 const editRecurrenceInput = document.getElementById("editRecurrenceInput");
+const editRecurrenceEndDateInput = document.getElementById("editRecurrenceEndDateInput");
+const editRecurrenceEndDateHint = document.getElementById("editRecurrenceEndDateHint");
+const editRecurrenceEndDateLabel = document.getElementById("editRecurrenceEndDateLabel");
 const editNotesInput = document.getElementById("editNotesInput");
 const editCancel = document.getElementById("editCancel");
 const editRecurringModal = document.getElementById("editRecurringModal");
@@ -213,6 +219,38 @@ currentMonth.setDate(1);
 let selectedDateKey = toDateKey(new Date());
 let editingTransactionId = null;
 let editingOccurrenceDate = null;
+
+function isRecurringRecurrence(value) {
+  return Boolean(value) && value !== "one-time" && value !== "none";
+}
+
+function updateRecurrenceEndDateFieldVisibility() {
+  if (!recurrenceInput || !recurrenceEndDateLabel || !recurrenceEndDateInput) {
+    return;
+  }
+
+  const recurring = isRecurringRecurrence(recurrenceInput.value);
+  recurrenceEndDateLabel.classList.toggle("hidden", !recurring);
+
+  if (!recurring) {
+    recurrenceEndDateInput.value = "";
+    setRecurrenceEndDateValidationHint();
+  }
+}
+
+function updateEditRecurrenceEndDateFieldVisibility() {
+  if (!editRecurrenceInput || !editRecurrenceEndDateLabel || !editRecurrenceEndDateInput) {
+    return;
+  }
+
+  const recurring = isRecurringRecurrence(editRecurrenceInput.value);
+  editRecurrenceEndDateLabel.classList.toggle("hidden", !recurring);
+
+  if (!recurring) {
+    editRecurrenceEndDateInput.value = "";
+    setEditRecurrenceEndDateValidationHint();
+  }
+}
 
 try {
   const urlParams = new URLSearchParams(window.location.search);
@@ -656,6 +694,40 @@ if (editIsTransferInput) {
   });
 }
 
+if (recurrenceInput) {
+  recurrenceInput.addEventListener("change", () => {
+    updateRecurrenceEndDateFieldVisibility();
+    setRecurrenceEndDateValidationHint();
+  });
+}
+
+if (editRecurrenceInput) {
+  editRecurrenceInput.addEventListener("change", () => {
+    updateEditRecurrenceEndDateFieldVisibility();
+    setEditRecurrenceEndDateValidationHint();
+  });
+}
+
+if (recurrenceEndDateInput) {
+  recurrenceEndDateInput.addEventListener("change", () => {
+    setRecurrenceEndDateValidationHint();
+  });
+
+  recurrenceEndDateInput.addEventListener("blur", () => {
+    setRecurrenceEndDateValidationHint();
+  });
+}
+
+if (editRecurrenceEndDateInput) {
+  editRecurrenceEndDateInput.addEventListener("change", () => {
+    setEditRecurrenceEndDateValidationHint();
+  });
+
+  editRecurrenceEndDateInput.addEventListener("blur", () => {
+    setEditRecurrenceEndDateValidationHint();
+  });
+}
+
 if (calculatorToggle && calculatorBody) {
   calculatorToggle.addEventListener("click", () => {
     const isHidden = calculatorBody.classList.toggle("hidden");
@@ -838,6 +910,7 @@ editAmountInput.addEventListener("blur", () => {
 
 editDateInput.addEventListener("change", () => {
   setEditDateValidationHint();
+  setEditRecurrenceEndDateValidationHint();
 });
 
 editDateInput.addEventListener("blur", () => {
@@ -860,6 +933,7 @@ dateInput.addEventListener("change", () => {
 
   selectedDateKey = dateInput.value;
   setDateValidationHint();
+  setRecurrenceEndDateValidationHint();
   render();
 });
 
@@ -1041,6 +1115,7 @@ transactionForm.addEventListener("submit", (event) => {
   const notes = notesInput.value.trim();
   const amount = Number(amountInput.value);
   const recurrence = recurrenceInput.value;
+  const recurrenceEndDateValue = recurrenceEndDateInput ? recurrenceEndDateInput.value : "";
   const isTransfer = isTransferInput.checked;
   const transferToAccountId = transferAccountInput.value;
 
@@ -1048,6 +1123,13 @@ transactionForm.addEventListener("submit", (event) => {
     setDateValidationHint({ showRequiredWhenEmpty: true });
     setDescriptionValidationHint({ showRequiredWhenEmpty: true });
     setAmountValidationHint({ showRequiredWhenEmpty: true });
+    setRecurrenceEndDateValidationHint();
+    return;
+  }
+
+  const recurrenceEndDateValidationMessage = setRecurrenceEndDateValidationHint();
+  if (recurrenceEndDateValidationMessage) {
+    recurrenceEndDateInput.focus();
     return;
   }
 
@@ -1055,6 +1137,10 @@ transactionForm.addEventListener("submit", (event) => {
     alert("Please select an account to transfer to.");
     return;
   }
+
+  const recurrenceEndDate = isRecurringRecurrence(recurrence) && recurrenceEndDateValue
+    ? recurrenceEndDateValue
+    : null;
 
   const newTransactionId = generateUuid();
   const linkedTransactionId = isTransfer ? generateUuid() : null;
@@ -1067,6 +1153,7 @@ transactionForm.addEventListener("submit", (event) => {
     notes,
     amount,
     recurrence,
+    recurrenceEndDate,
     linkedTransactionId,
     linkedAccountId: isTransfer ? transferToAccountId : null,
   };
@@ -1085,6 +1172,7 @@ transactionForm.addEventListener("submit", (event) => {
         notes,
         amount: -amount, // Opposite amount
         recurrence,
+        recurrenceEndDate,
         linkedTransactionId: newTransactionId,
         linkedAccountId: activeAccountId,
       };
@@ -1104,6 +1192,7 @@ transactionForm.addEventListener("submit", (event) => {
   commitTransactions(nextTransactions);
   transactionForm.reset();
   recurrenceInput.value = "one-time";
+  updateRecurrenceEndDateFieldVisibility();
   dateInput.value = selectedDateKey;
   isTransferInput.checked = false;
   transferAccountLabel.classList.add("hidden");
@@ -1111,6 +1200,7 @@ transactionForm.addEventListener("submit", (event) => {
   setDateValidationHint();
   setDescriptionValidationHint();
   setAmountValidationHint();
+  setRecurrenceEndDateValidationHint();
   descriptionInput.focus();
 });
 
@@ -1136,6 +1226,10 @@ function loadTransactions() {
         notes: entry.notes || '',
         amount: Number(entry.amount),
         recurrence: entry.recurrence || 'one-time',
+        excludedDates: Array.isArray(entry.excludedDates) ? entry.excludedDates : [],
+        recurrenceEndDate: typeof entry.recurrenceEndDate === "string" && /^\d{4}-\d{2}-\d{2}$/.test(entry.recurrenceEndDate)
+          ? entry.recurrenceEndDate
+          : null,
         linkedTransactionId: entry.linkedTransactionId || null,
         linkedAccountId: entry.linkedAccountId || null,
       }))
@@ -1526,6 +1620,8 @@ function parseCsv(content) {
       notes,
       amount,
       recurrence: recurrence || "one-time",
+      excludedDates: [],
+      recurrenceEndDate: null,
     });
   }
 
@@ -2409,6 +2505,7 @@ function updateLinkedTransaction(txn) {
       linkedTxn.notes = txn.notes;
       linkedTxn.amount = -txn.amount; // Keep opposite amount
       linkedTxn.recurrence = txn.recurrence;
+      linkedTxn.recurrenceEndDate = txn.recurrenceEndDate || null;
       saveAccounts();
     }
   }
@@ -2551,6 +2648,48 @@ function getAmountValidationMessage({ rawAmountValue, showRequiredWhenEmpty }) {
   return "";
 }
 
+function getRecurrenceEndDateValidationMessage({ startDateValue, recurrenceValue, recurrenceEndDateValue }) {
+  if (!isRecurringRecurrence(recurrenceValue) || !recurrenceEndDateValue) {
+    return "";
+  }
+
+  if (startDateValue && recurrenceEndDateValue < startDateValue) {
+    return "End date must be on or after the start date.";
+  }
+
+  return "";
+}
+
+function setRecurrenceEndDateValidationHint() {
+  if (!recurrenceEndDateInput || !recurrenceEndDateHint) {
+    return "";
+  }
+
+  const message = getRecurrenceEndDateValidationMessage({
+    startDateValue: dateInput?.value || "",
+    recurrenceValue: recurrenceInput?.value || "one-time",
+    recurrenceEndDateValue: recurrenceEndDateInput.value,
+  });
+
+  applyFieldValidationState({ input: recurrenceEndDateInput, hint: recurrenceEndDateHint, message });
+  return message;
+}
+
+function setEditRecurrenceEndDateValidationHint() {
+  if (!editRecurrenceEndDateInput || !editRecurrenceEndDateHint) {
+    return "";
+  }
+
+  const message = getRecurrenceEndDateValidationMessage({
+    startDateValue: editDateInput?.value || "",
+    recurrenceValue: editRecurrenceInput?.value || "one-time",
+    recurrenceEndDateValue: editRecurrenceEndDateInput.value,
+  });
+
+  applyFieldValidationState({ input: editRecurrenceEndDateInput, hint: editRecurrenceEndDateHint, message });
+  return message;
+}
+
 function applyFieldValidationState({ input, hint, message }) {
   hint.textContent = message;
   hint.classList.toggle("visible", Boolean(message));
@@ -2598,6 +2737,11 @@ function openEditTransactionModal(transactionId, sourceItem = null) {
   setEditDescriptionValidationHint();
   setEditAmountValidationHint();
   editRecurrenceInput.value = txn.recurrence || 'one-time';
+  if (editRecurrenceEndDateInput) {
+    editRecurrenceEndDateInput.value = txn.recurrenceEndDate || '';
+  }
+  updateEditRecurrenceEndDateFieldVisibility();
+  setEditRecurrenceEndDateValidationHint();
   editNotesInput.value = txn.notes || '';
   
   // Handle transfer fields
@@ -2642,12 +2786,14 @@ editTransactionForm.addEventListener("submit", (event) => {
   const editedNotes = editNotesInput.value.trim();
   const editedRecurrence = editRecurrenceInput.value;
   const editedAmount = Number(editAmountInput.value);
+  const editedRecurrenceEndDateValue = editRecurrenceEndDateInput ? editRecurrenceEndDateInput.value : "";
 
   const editDateValidationMessage = setEditDateValidationHint({ showRequiredWhenEmpty: true });
   const editDescriptionValidationMessage = setEditDescriptionValidationHint({ showRequiredWhenEmpty: true });
   const editAmountValidationMessage = setEditAmountValidationHint({ showRequiredWhenEmpty: true });
+  const editRecurrenceEndDateValidationMessage = setEditRecurrenceEndDateValidationHint();
 
-  if (editDateValidationMessage || editDescriptionValidationMessage || editAmountValidationMessage) {
+  if (editDateValidationMessage || editDescriptionValidationMessage || editAmountValidationMessage || editRecurrenceEndDateValidationMessage) {
     if (editDateValidationMessage) {
       editDateInput.focus();
       return;
@@ -2655,6 +2801,11 @@ editTransactionForm.addEventListener("submit", (event) => {
 
     if (editDescriptionValidationMessage) {
       editDescriptionInput.focus();
+      return;
+    }
+
+    if (editRecurrenceEndDateValidationMessage) {
+      editRecurrenceEndDateInput.focus();
       return;
     }
 
@@ -2667,6 +2818,9 @@ editTransactionForm.addEventListener("submit", (event) => {
 
   // Check if this is a recurring transaction
   const isRecurring = txn.recurrence && txn.recurrence !== 'one-time' && txn.recurrence !== 'none';
+  const editedRecurrenceEndDate = isRecurringRecurrence(editedRecurrence) && editedRecurrenceEndDateValue
+    ? editedRecurrenceEndDateValue
+    : null;
   
   // Collect form data
   pendingEditData = {
@@ -2676,6 +2830,7 @@ editTransactionForm.addEventListener("submit", (event) => {
     description: editDescriptionInput.value.trim(),
     amount: Number(editAmountInput.value),
     recurrence: editRecurrenceInput.value,
+    recurrenceEndDate: editedRecurrenceEndDate,
     notes: editNotesInput.value.trim(),
     isTransfer: editIsTransferInput.checked,
     transferToAccountId: editTransferAccountInput.value,
@@ -2765,7 +2920,7 @@ function applyEditToTransaction(transactionId, editData, applyToAll) {
           recurrence: editData.recurrence,
           notes: editData.notes,
           excludedDates: [],
-          recurrenceEndDate: null,
+          recurrenceEndDate: editData.recurrenceEndDate,
           linkedTransactionId: null,
           linkedAccountId: null,
         };
@@ -2793,7 +2948,7 @@ function applyEditToTransaction(transactionId, editData, applyToAll) {
               linkedTransactionId: futureTxn.id,
               linkedAccountId: activeAccountId,
               excludedDates: [],
-              recurrenceEndDate: null,
+              recurrenceEndDate: editData.recurrenceEndDate,
             };
             targetAccount.transactions = targetAccount.transactions || [];
             targetAccount.transactions.push(linkedTransaction);
@@ -2830,6 +2985,7 @@ function applyEditToTransaction(transactionId, editData, applyToAll) {
             notes: editData.notes,
             amount: -editData.amount,
             recurrence: editData.recurrence,
+            recurrenceEndDate: editData.recurrenceEndDate,
             linkedTransactionId: baseTxn.id,
             linkedAccountId: activeAccountId,
           };
@@ -2857,6 +3013,7 @@ function applyEditToTransaction(transactionId, editData, applyToAll) {
             notes: editData.notes,
             amount: -editData.amount,
             recurrence: editData.recurrence,
+            recurrenceEndDate: editData.recurrenceEndDate,
             linkedTransactionId: baseTxn.id,
             linkedAccountId: activeAccountId,
           };
@@ -2872,6 +3029,7 @@ function applyEditToTransaction(transactionId, editData, applyToAll) {
       baseTxn.description = editData.description;
       baseTxn.amount = editData.amount;
       baseTxn.recurrence = editData.recurrence;
+      baseTxn.recurrenceEndDate = editData.recurrenceEndDate;
       baseTxn.notes = editData.notes;
       
       // Update linked transaction if it exists
@@ -2905,6 +3063,7 @@ function applyEditToTransaction(transactionId, editData, applyToAll) {
         description: editData.description,
         amount: editData.amount,
         recurrence: 'one-time',
+        recurrenceEndDate: null,
         notes: editData.notes
       };
       
@@ -2928,6 +3087,7 @@ function applyEditToTransaction(transactionId, editData, applyToAll) {
             notes: editData.notes,
             amount: -editData.amount,
             recurrence: 'one-time',
+            recurrenceEndDate: null,
             linkedTransactionId: newTxn.id,
             linkedAccountId: activeAccountId,
           };
@@ -2967,6 +3127,7 @@ function applyEditToTransaction(transactionId, editData, applyToAll) {
             notes: editData.notes,
             amount: -editData.amount,
             recurrence: editData.recurrence,
+            recurrenceEndDate: editData.recurrenceEndDate,
             linkedTransactionId: txn.id,
             linkedAccountId: activeAccountId,
           };
@@ -2994,6 +3155,7 @@ function applyEditToTransaction(transactionId, editData, applyToAll) {
             notes: editData.notes,
             amount: -editData.amount,
             recurrence: editData.recurrence,
+            recurrenceEndDate: editData.recurrenceEndDate,
             linkedTransactionId: txn.id,
             linkedAccountId: activeAccountId,
           };
@@ -3009,6 +3171,7 @@ function applyEditToTransaction(transactionId, editData, applyToAll) {
       txn.description = editData.description;
       txn.amount = editData.amount;
       txn.recurrence = editData.recurrence;
+      txn.recurrenceEndDate = editData.recurrenceEndDate;
       txn.notes = editData.notes;
       
       // Update linked transaction if it exists
@@ -3112,6 +3275,8 @@ async function initialize() {
     
     // Initialize UI
     if (dateInput) dateInput.value = selectedDateKey;
+    updateRecurrenceEndDateFieldVisibility();
+    setRecurrenceEndDateValidationHint();
     if (transferAccountInput) updateTransferAccountOptions(transferAccountInput, transferAccountLabel);
     if (editTransferAccountInput) updateTransferAccountOptions(editTransferAccountInput, editTransferAccountLabel);
     renderSidebarNotepads();

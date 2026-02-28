@@ -188,6 +188,11 @@
               </select>
               <span class="field-hint"></span>
             </label>
+            <label id="recurrenceEndDateLabel" class="hidden">
+              Recurrence End Date
+              <input id="recurrenceEndDateInput" type="date" />
+              <span id="recurrenceEndDateHint" class="field-hint" aria-live="polite"></span>
+            </label>
             <label class="notes-field">
               Notes
               <textarea id="notesInput" maxlength="200" placeholder="Optional notes or memo..."></textarea>
@@ -290,6 +295,11 @@
             <option value="quarterly">Quarterly</option>
             <option value="yearly">Yearly</option>
           </select>
+        </label>
+        <label id="editRecurrenceEndDateLabel" class="hidden">
+          Recurrence End Date
+          <input id="editRecurrenceEndDateInput" type="date" />
+          <span id="editRecurrenceEndDateHint" class="field-hint" aria-live="polite"></span>
         </label>
         <label class="notes-field">
           Notes
