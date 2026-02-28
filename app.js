@@ -38,6 +38,8 @@ const transactionListTitle = document.getElementById("transactionListTitle");
 const monthChangeDisplay = document.getElementById("monthChangeDisplay");
 const endBalanceDisplay = document.getElementById("endBalanceDisplay");
 const endOfYearBalanceDisplay = document.getElementById("endOfYearBalanceDisplay");
+const firstNegativeBalanceBtn = document.getElementById("firstNegativeBalanceBtn");
+const firstNegativeBalanceDisplay = document.getElementById("firstNegativeBalanceDisplay");
 const startingBalanceDisplay = document.getElementById("startingBalanceDisplay");
 const calendarWorkspace = document.getElementById("calendarWorkspace");
 const workspacePanels = document.getElementById("workspacePanels");
@@ -1874,8 +1876,6 @@ function expandRecurringTransactions(startDate, endDate) {
 }
 
 function getDailyTotalsMap() {
-  const totals = new Map();
-  
   // Get the current month's start and end dates for expansion
   const monthStart = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1);
   const monthEnd = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0);
@@ -1885,13 +1885,42 @@ function getDailyTotalsMap() {
   expandStart.setFullYear(expandStart.getFullYear() - 1);
   const expandEnd = new Date(monthEnd);
   expandEnd.setFullYear(expandEnd.getFullYear() + 1);
-  
-  const allTransactions = expandRecurringTransactions(expandStart, expandEnd);
-  
+
+  const totals = getDailyTotalsMapForRange(expandStart, expandEnd);
+  return totals;
+}
+
+function getDailyTotalsMapForRange(startDate, endDate) {
+  const totals = new Map();
+  const allTransactions = expandRecurringTransactions(startDate, endDate);
+
   for (const item of allTransactions) {
     totals.set(item.date, (totals.get(item.date) || 0) + item.amount);
   }
+
   return totals;
+}
+
+function getFirstNegativeBalancePointForYear(year) {
+  const yearStart = new Date(year, 0, 1);
+  const yearEnd = new Date(year, 11, 31);
+  const yearStartKey = toDateKey(yearStart);
+  const yearTotals = getDailyTotalsMapForRange(yearStart, yearEnd);
+  let runningBalance = getBalanceBefore(yearStartKey);
+
+  for (let day = new Date(yearStart); day <= yearEnd; day.setDate(day.getDate() + 1)) {
+    const dateKey = toDateKey(day);
+    runningBalance += yearTotals.get(dateKey) || 0;
+
+    if (runningBalance < 0) {
+      return {
+        dateKey,
+        dayLabel: day.toLocaleDateString(undefined, { month: "long", day: "numeric" }),
+      };
+    }
+  }
+
+  return null;
 }
 
 function getBalanceBefore(dateKey) {
@@ -2000,10 +2029,45 @@ function renderCalendar() {
   endBalanceDisplay.textContent = formatCurrency(endOfMonthBalance);
   const endOfYearBalance = getBalanceBefore(`${year + 1}-01-01`);
   endOfYearBalanceDisplay.textContent = formatCurrency(endOfYearBalance);
+  const firstNegativePoint = getFirstNegativeBalancePointForYear(year);
+
+  if (firstNegativeBalanceDisplay) {
+    firstNegativeBalanceDisplay.textContent = firstNegativePoint
+      ? firstNegativePoint.dayLabel
+      : "None";
+    firstNegativeBalanceDisplay.className = firstNegativePoint ? "negative" : "";
+  }
+
+  if (firstNegativeBalanceBtn) {
+    if (firstNegativePoint) {
+      firstNegativeBalanceBtn.dataset.targetDate = firstNegativePoint.dateKey;
+      firstNegativeBalanceBtn.classList.remove("is-disabled");
+      firstNegativeBalanceBtn.removeAttribute("aria-disabled");
+      firstNegativeBalanceBtn.title = `Go to ${firstNegativePoint.dateKey}`;
+    } else {
+      delete firstNegativeBalanceBtn.dataset.targetDate;
+      firstNegativeBalanceBtn.classList.add("is-disabled");
+      firstNegativeBalanceBtn.setAttribute("aria-disabled", "true");
+      firstNegativeBalanceBtn.title = `No negative balance day found in ${year}`;
+    }
+  }
 
   monthChangeDisplay.className = monthChange === 0 ? "" : monthChange > 0 ? "positive" : "negative";
   endBalanceDisplay.className = endOfMonthBalance === 0 ? "" : endOfMonthBalance > 0 ? "positive" : "negative";
   endOfYearBalanceDisplay.className = endOfYearBalance === 0 ? "" : endOfYearBalance > 0 ? "positive" : "negative";
+}
+
+if (firstNegativeBalanceBtn) {
+  firstNegativeBalanceBtn.addEventListener("click", () => {
+    const targetDate = firstNegativeBalanceBtn.dataset.targetDate;
+    if (!targetDate) {
+      return;
+    }
+
+    const [targetYear, targetMonth] = targetDate.split("-").map(Number);
+    currentMonth = new Date(targetYear, targetMonth - 1, 1);
+    selectCalendarDate(targetDate);
+  });
 }
 
 function renderTransactions() {

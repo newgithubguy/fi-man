@@ -311,7 +311,7 @@ body {
 .summary-row {
   margin-top: 12px;
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 12px;
 }
 
@@ -350,6 +350,29 @@ body {
   border: 1px solid var(--border);
   border-radius: 10px;
   padding: 10px;
+}
+
+.stat-link {
+  appearance: none;
+  font: inherit;
+  color: inherit;
+  background: var(--card);
+  text-align: left;
+  width: 100%;
+  cursor: pointer;
+}
+
+.stat-link:not(.is-disabled):hover {
+  border-color: var(--accent);
+}
+
+.stat-link:not(.is-disabled):focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.stat-link.is-disabled {
+  cursor: default;
 }
 
 .stat .label {
