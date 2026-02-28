@@ -434,10 +434,11 @@ body {
 }
 
 .calendar-workspace {
+  --workspace-panel-width: minmax(360px, 420px);
   max-width: 1400px;
   width: 100%;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(360px, 420px);
+  grid-template-columns: minmax(0, 1fr) var(--workspace-panel-width);
   gap: 16px;
   align-items: start;
 }
@@ -449,10 +450,13 @@ body {
 }
 
 .workspace-panels .resizable-window {
-  resize: vertical;
+  resize: both;
   overflow: auto;
   min-height: 220px;
+  min-width: 300px;
   max-height: 80vh;
+  max-width: 100%;
+  justify-self: start;
 }
 
 #transactionsWindow {

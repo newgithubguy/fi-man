@@ -40,6 +40,8 @@ const endBalanceDisplay = document.getElementById("endBalanceDisplay");
 const startingBalanceDisplay = document.getElementById("startingBalanceDisplay");
 const calendarWorkspace = document.getElementById("calendarWorkspace");
 const workspacePanels = document.getElementById("workspacePanels");
+const addTransactionWindow = document.getElementById("addTransactionWindow");
+const transactionsWindow = document.getElementById("transactionsWindow");
 const panelDragHandle = document.getElementById("panelDragHandle");
 const panelLeftBtn = document.getElementById("panelLeftBtn");
 const panelRightBtn = document.getElementById("panelRightBtn");
@@ -142,6 +144,33 @@ function applyPanelLayout(layout) {
   if (panelBottomBtn) {
     panelBottomBtn.setAttribute("aria-pressed", String(normalizedLayout === "bottom"));
   }
+
+  syncWorkspacePanelWidth();
+}
+
+function syncWorkspacePanelWidth() {
+  if (!calendarWorkspace) {
+    return;
+  }
+
+  if (calendarWorkspace.classList.contains("layout-bottom")) {
+    calendarWorkspace.style.removeProperty("--workspace-panel-width");
+    return;
+  }
+
+  const candidateWidths = [addTransactionWindow, transactionsWindow]
+    .filter(Boolean)
+    .map((element) => Math.ceil(element.getBoundingClientRect().width));
+
+  if (!candidateWidths.length) {
+    return;
+  }
+
+  const minimumWidth = 360;
+  const requestedWidth = Math.max(minimumWidth, ...candidateWidths);
+  const maxAllowedWidth = Math.max(minimumWidth, Math.floor(calendarWorkspace.clientWidth * 0.6));
+  const nextWidth = Math.min(requestedWidth, maxAllowedWidth);
+  calendarWorkspace.style.setProperty("--workspace-panel-width", `${nextWidth}px`);
 }
 
 function setPanelLayout(layout) {
@@ -186,6 +215,22 @@ if (panelBottomBtn) {
 }
 
 applyPanelLayout(getSavedPanelLayout());
+
+if (typeof ResizeObserver !== "undefined") {
+  const panelResizeObserver = new ResizeObserver(() => {
+    syncWorkspacePanelWidth();
+  });
+
+  if (addTransactionWindow) {
+    panelResizeObserver.observe(addTransactionWindow);
+  }
+
+  if (transactionsWindow) {
+    panelResizeObserver.observe(transactionsWindow);
+  }
+}
+
+window.addEventListener("resize", syncWorkspacePanelWidth);
 
 if (panelDragHandle && calendarWorkspace) {
   let pointerStartX = null;
