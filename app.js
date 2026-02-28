@@ -152,6 +152,13 @@ function applyPanelLayout(layout) {
 }
 
 function syncWorkspacePanelWidth() {
+  if (syncWorkspacePanelWidth.isRunning) {
+    return;
+  }
+
+  syncWorkspacePanelWidth.isRunning = true;
+
+  try {
   if (!calendarWorkspace) {
     return;
   }
@@ -168,13 +175,15 @@ function syncWorkspacePanelWidth() {
 
     const measuredWidth = Math.ceil(element.getBoundingClientRect().width);
     const maxWidth = Math.max(minimumWidth, topPanelMaxWidth);
-    const clampedWidth = Math.min(Math.max(minimumWidth, measuredWidth), maxWidth);
+    return Math.min(Math.max(minimumWidth, measuredWidth), maxWidth);
+  };
 
-    if (measuredWidth !== clampedWidth) {
-      element.style.width = `${clampedWidth}px`;
+  const setWorkspaceVar = (name, value) => {
+    const current = calendarWorkspace.style.getPropertyValue(name).trim();
+    const next = `${value}px`;
+    if (current !== next) {
+      calendarWorkspace.style.setProperty(name, next);
     }
-
-    return clampedWidth;
   };
 
   const calendarRequestedWidth = clampWindowWidth(calendarWindow, 420);
@@ -200,7 +209,7 @@ function syncWorkspacePanelWidth() {
     Math.floor(Math.min(calendarWorkspace.clientWidth * 0.6, topPanelMaxWidth - 320)),
   );
   const nextWidth = Math.min(requestedWidth, maxAllowedWidth);
-  calendarWorkspace.style.setProperty("--workspace-panel-width", `${nextWidth}px`);
+  setWorkspaceVar("--workspace-panel-width", nextWidth);
 
   const minimumCalendarWidth = 420;
   const maxCalendarByAvailableSpace = Math.max(
@@ -213,8 +222,13 @@ function syncWorkspacePanelWidth() {
     maxCalendarByAvailableSpace,
     maxCalendarByTopPanel,
   );
-  calendarWorkspace.style.setProperty("--workspace-calendar-width", `${nextCalendarWidth}px`);
+  setWorkspaceVar("--workspace-calendar-width", nextCalendarWidth);
+  } finally {
+    syncWorkspacePanelWidth.isRunning = false;
+  }
 }
+
+syncWorkspacePanelWidth.isRunning = false;
 
 function setPanelLayout(layout) {
   const normalizedLayout = layout === "left" || layout === "bottom" ? layout : "right";
