@@ -9,9 +9,12 @@ Covers critical user flows:
 - Account management
 - Transaction create/edit/delete
 - Recurring transaction behavior
+- Recurring end-date behavior
 - Transfers between accounts
 - Calendar interactions and layout controls
+- Summary first-negative jump
 - Graph navigation back to calendar day
+- Transaction color to category chart color mapping
 - Import/export basics
 
 ## Test Environment
@@ -78,6 +81,15 @@ Expected:
 - Change applies from selected occurrence forward.
 - Past occurrences remain unchanged.
 
+Also validate end-date path:
+- [ ] Create a recurring transaction with a recurrence end date.
+- [ ] Verify occurrences stop after that date.
+- [ ] Try setting end date before start date.
+
+Expected:
+- Series stops at end date.
+- Inline validation blocks end date before start date.
+
 Also validate single-occurrence path:
 - [ ] Edit a recurring occurrence and apply to this occurrence only.
 
@@ -124,7 +136,31 @@ Expected:
 
 ---
 
-## H. Import / Export Sanity
+## H. First Negative Summary Jump
+
+- [ ] Ensure the running balance becomes negative at least once.
+- [ ] Verify the **First Negative** card shows a date label.
+- [ ] Click the **First Negative** card.
+
+Expected:
+- Calendar jumps to the matching month/year and date selection.
+- If no negative day exists, card shows `None` and is not clickable.
+
+---
+
+## I. Transaction Color and Category Pie Colors
+
+- [ ] Add transactions with different descriptions and distinct colors.
+- [ ] Open Categories page and confirm slice colors match selected transaction colors.
+- [ ] Edit a transaction color and verify the category slice updates after refresh.
+
+Expected:
+- Category pie chart reflects chosen transaction colors.
+- Updates persist after reload.
+
+---
+
+## J. Import / Export Sanity
 
 - [ ] Export CSV for a date range.
 - [ ] Re-import same CSV in Merge mode.
@@ -137,7 +173,7 @@ Expected:
 
 ---
 
-## I. Persistence Check
+## K. Persistence Check
 
 - [ ] Refresh browser.
 - [ ] Sign out and back in.

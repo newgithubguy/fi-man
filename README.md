@@ -7,6 +7,8 @@ Simple browser-based finance tracker with:
 - **Income vs Expenses graph** - Visualize financial trends over time
 - **Category breakdown** - Analyze spending by category with doughnut charts
 - **Recurring transactions** - Automatically expand weekly, bi-weekly, monthly, quarterly, and yearly transactions
+- **Recurring end date support** - Optionally stop recurring series on a selected date
+- **Transaction color tags** - Assign a color to each transaction and reuse those colors in category charts
 - CSV import/export with recurring transaction expansion
 - Built-in calculator positioned in the accounts sidebar
 - Data persistence with SQLite database (Docker) or browser storage
@@ -80,13 +82,15 @@ Open `index.html` directly in your browser for a basic offline experience (no pe
   - **Delete All Data**: Permanently deletes all accounts, transactions, and settings (requires typing "DELETE ALL" to confirm)
 
 ### Transactions
-1. Add transactions using date, payee, description, notes, amount, and recurrence.
+1. Add transactions using date, payee, description, notes, amount, color, recurrence, and optional recurrence end date.
    - Positive amount = income
    - Negative amount = expense
    - Payee is optional (e.g., Walmart, Employer, Landlord)
    - Notes is optional for additional memo or details
+   - Color is optional and defaults to blue; edit anytime in the transaction edit modal.
    - Click a calendar day to prefill the transaction date quickly.
    - Select recurrence frequency: one-time, daily, weekly, bi-weekly, monthly, quarterly, or yearly.
+   - For recurring entries, you can set **Recurrence End Date** to stop the series automatically.
    - Recurring transactions automatically appear on future dates based on the selected frequency.
    - Date, Description, and Amount show inline validation hints when required values are missing (Amount also blocks zero).
 
@@ -101,6 +105,7 @@ Open `index.html` directly in your browser for a basic offline experience (no pe
 3. Move between months with arrow buttons.
 4. Review daily and balance totals directly in the calendar.
 5. Click on a day to view all transactions for that specific date (including recurring instances).
+6. Use the **First Negative** summary box (next to End of Year) to jump directly to the first day balance drops below zero.
 
 ### Graphs & Analysis
 - Click **📊 Graph** to see income vs expenses over time.
@@ -114,6 +119,7 @@ Open `index.html` directly in your browser for a basic offline experience (no pe
 - Click **📂 Categories** to analyze spending and income by category.
   - Doughnut charts showing percentage breakdown by category
   - Category names are based on transaction descriptions
+   - Pie slices use transaction colors when available (falls back to default palette when not set)
   - View totals and percentages for each category
   - Filter by time range or specific month
   - List view shows all categories with visual bars and percentages

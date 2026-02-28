@@ -56,6 +56,8 @@ Access the app:
 2. Click Pull and redeploy (Git stack)
 3. If changes do not appear, rebuild using the command line with --no-cache
 
+Note: recent updates add new transaction fields (color, recurrence end date, excluded dates). Redeploy/rebuild ensures startup schema migration runs and these fields are persisted.
+
 ### Force Image Refresh in Portainer
 
 If code changes are not reflected after redeploy:
@@ -113,6 +115,14 @@ The app now requires user authentication. Each user has their own isolated finan
 3. Click "Update the stack"
 
 **Note:** If using HTTPS/SSL, update the server.js session configuration to set `cookie.secure: true`
+
+## Current Feature Highlights
+
+- Multi-account tracking with linked transfers
+- Recurring transactions with optional end date
+- First-negative balance quick jump to date
+- Transaction-level color selection
+- Category pie charts reflecting saved transaction colors
 
 ### Data Migration:
 

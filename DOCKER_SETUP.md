@@ -76,6 +76,8 @@ docker compose build --no-cache
 docker compose up -d
 ```
 
+Note: recent updates add new transaction fields (color, recurrence end date, excluded dates). Rebuilding/restarting ensures automatic SQLite schema migration runs at startup.
+
 ## Refresh Docker Image Explicitly
 
 If you want to force-refresh the local image before starting containers:
@@ -136,7 +138,9 @@ docker compose up -d
 - Multi-account finance tracking
 - Income vs Expenses graphs with auto-refresh
 - Category breakdown analysis (expenses & income by description)
-- Recurring transactions support
+- Recurring transactions with optional end date
+- Transaction color selection with category pie chart color mapping
+- First-negative summary jump-to-date shortcut
 - Built-in calculator in sidebar
 - Linked transfers between accounts
 - CSV import/export
