@@ -1753,6 +1753,7 @@ function renderCalendar() {
   for (let cell = 0; cell < 42; cell++) {
     const date = new Date(gridStart.getFullYear(), gridStart.getMonth(), gridStart.getDate() + cell);
     const dateKey = toDateKey(date);
+    const isOddDayNumber = date.getDate() % 2 === 1;
     const isCurrentMonth = date.getMonth() === month;
     const isWeekend = date.getDay() === 0 || date.getDay() === 6;
     const dayAmount = dailyTotals.get(dateKey) || 0;
@@ -1764,6 +1765,7 @@ function renderCalendar() {
 
     const day = document.createElement("article");
     day.className = `day${isCurrentMonth ? "" : " other-month"}`;
+    day.classList.add(isOddDayNumber ? "odd-day" : "even-day");
 
     if (isCurrentMonth && isWeekend) {
       day.classList.add("weekend-day");
