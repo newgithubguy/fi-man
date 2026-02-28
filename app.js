@@ -186,11 +186,8 @@ function syncWorkspacePanelWidth() {
     }
   };
 
-  const calendarRequestedWidth = clampWindowWidth(calendarWindow, 420);
-
   if (calendarWorkspace.classList.contains("layout-bottom")) {
     calendarWorkspace.style.removeProperty("--workspace-panel-width");
-    calendarWorkspace.style.removeProperty("--workspace-calendar-width");
     return;
   }
 
@@ -210,19 +207,6 @@ function syncWorkspacePanelWidth() {
   );
   const nextWidth = Math.min(requestedWidth, maxAllowedWidth);
   setWorkspaceVar("--workspace-panel-width", nextWidth);
-
-  const minimumCalendarWidth = 420;
-  const maxCalendarByAvailableSpace = Math.max(
-    minimumCalendarWidth,
-    Math.floor(calendarWorkspace.clientWidth - nextWidth - 16),
-  );
-  const maxCalendarByTopPanel = Math.max(minimumCalendarWidth, topPanelMaxWidth - nextWidth - 16);
-  const nextCalendarWidth = Math.min(
-    Math.max(minimumCalendarWidth, calendarRequestedWidth),
-    maxCalendarByAvailableSpace,
-    maxCalendarByTopPanel,
-  );
-  setWorkspaceVar("--workspace-calendar-width", nextCalendarWidth);
   } finally {
     syncWorkspacePanelWidth.isRunning = false;
   }
@@ -277,10 +261,6 @@ if (typeof ResizeObserver !== "undefined") {
   const panelResizeObserver = new ResizeObserver(() => {
     syncWorkspacePanelWidth();
   });
-
-  if (calendarWindow) {
-    panelResizeObserver.observe(calendarWindow);
-  }
 
   if (addTransactionWindow) {
     panelResizeObserver.observe(addTransactionWindow);

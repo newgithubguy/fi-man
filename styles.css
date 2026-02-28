@@ -435,11 +435,10 @@ body {
 
 .calendar-workspace {
   --workspace-panel-width: minmax(360px, 420px);
-  --workspace-calendar-width: minmax(0, 1fr);
   max-width: 1400px;
   width: 100%;
   display: grid;
-  grid-template-columns: var(--workspace-calendar-width) var(--workspace-panel-width);
+  grid-template-columns: minmax(0, 1fr) var(--workspace-panel-width);
   gap: 16px;
   align-items: start;
 }
