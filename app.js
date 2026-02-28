@@ -102,6 +102,7 @@ let currentMonth = new Date();
 currentMonth.setDate(1);
 let selectedDateKey = toDateKey(new Date());
 let editingTransactionId = null;
+let editingOccurrenceDate = null;
 let pendingEditData = null;
 
 document.getElementById("prevMonth").addEventListener("click", () => {
@@ -1488,6 +1489,27 @@ function getNextRecurrenceDate(dateStr, recurrence) {
   return toDateKey(date);
 }
 
+function getLastOccurrenceBeforeDate(startDate, recurrence, targetDate) {
+  if (!startDate || !recurrence || !targetDate || targetDate <= startDate) {
+    return null;
+  }
+
+  let currentDate = startDate;
+  let lastOccurrence = startDate;
+
+  while (true) {
+    const nextDate = getNextRecurrenceDate(currentDate, recurrence);
+    if (!nextDate || nextDate >= targetDate) {
+      break;
+    }
+
+    lastOccurrence = nextDate;
+    currentDate = nextDate;
+  }
+
+  return lastOccurrence;
+}
+
 function expandRecurringTransactions(startDate, endDate) {
   const expanded = [];
   const startKey = toDateKey(startDate);
@@ -1728,7 +1750,7 @@ function renderTransactions() {
     editButton.className = "edit-btn";
     editButton.textContent = "Edit";
     editButton.addEventListener("click", () => {
-      openEditTransactionModal(idToUse);
+      openEditTransactionModal(idToUse, item);
     });
 
     const removeButton = document.createElement("button");
@@ -2154,16 +2176,19 @@ function populateYearSelect() {
   ).join('');
 }
 
-function openEditTransactionModal(transactionId) {
+function openEditTransactionModal(transactionId, sourceItem = null) {
   const resolvedTransactionId = resolveBaseTransactionId(transactionId);
   editingTransactionId = resolvedTransactionId;
   
   // Find the transaction to edit
   const txn = transactions.find(t => t.id === resolvedTransactionId);
   if (!txn) return;
+
+  const isRecurringOccurrence = Boolean(sourceItem && sourceItem.isRecurring && sourceItem.date);
+  editingOccurrenceDate = isRecurringOccurrence ? sourceItem.date : txn.date;
   
   // Populate form fields
-  editDateInput.value = txn.date;
+  editDateInput.value = editingOccurrenceDate;
   editPayeeInput.value = txn.payee || '';
   editDescriptionInput.value = txn.description || '';
   editAmountInput.value = txn.amount;
@@ -2191,8 +2216,12 @@ function openEditTransactionModal(transactionId) {
 
 function closeEditTransactionModal(options = {}) {
   const keepEditingTransactionId = Boolean(options.keepEditingTransactionId);
+  const keepEditingOccurrenceDate = Boolean(options.keepEditingOccurrenceDate);
   if (!keepEditingTransactionId) {
     editingTransactionId = null;
+  }
+  if (!keepEditingOccurrenceDate) {
+    editingOccurrenceDate = null;
   }
   editTransactionModal.hidden = true;
   editTransactionModal.setAttribute('aria-hidden', 'true');
@@ -2240,6 +2269,7 @@ editTransactionForm.addEventListener("submit", (event) => {
   // Collect form data
   pendingEditData = {
     date: editDateInput.value,
+    seriesSplitDate: editingOccurrenceDate || editDateInput.value,
     payee: editPayeeInput.value.trim(),
     description: editDescriptionInput.value.trim(),
     amount: Number(editAmountInput.value),
@@ -2252,7 +2282,7 @@ editTransactionForm.addEventListener("submit", (event) => {
 
   // If recurring, show the modal to ask how to apply changes
   if (isRecurring) {
-    closeEditTransactionModal({ keepEditingTransactionId: true });
+    closeEditTransactionModal({ keepEditingTransactionId: true, keepEditingOccurrenceDate: true });
     editRecurringModal.hidden = false;
     editRecurringModal.setAttribute('aria-hidden', 'false');
     return;
@@ -2268,6 +2298,7 @@ if (editRecurringCancel) {
     editRecurringModal.hidden = true;
     editRecurringModal.setAttribute('aria-hidden', 'true');
     editingTransactionId = null;
+    editingOccurrenceDate = null;
     pendingEditData = null;
   });
 }
@@ -2305,6 +2336,71 @@ function applyEditToTransaction(transactionId, editData, applyToAll) {
     const baseTxn = transactions.find(t => t.id === baseId && !t.isRecurringInstance);
     
     if (baseTxn) {
+      const splitFromDate = editData.seriesSplitDate || editData.date;
+      const isRecurringSeries = baseTxn.recurrence && baseTxn.recurrence !== 'one-time' && baseTxn.recurrence !== 'none';
+      const shouldSplitForFutureOnly = isRecurringSeries && splitFromDate > baseTxn.date;
+
+      if (shouldSplitForFutureOnly) {
+        const splitEndDate = getLastOccurrenceBeforeDate(baseTxn.date, baseTxn.recurrence, splitFromDate) || baseTxn.date;
+        baseTxn.recurrenceEndDate = splitEndDate;
+
+        // Keep old linked series for past only
+        if (baseTxn.linkedTransactionId && baseTxn.linkedAccountId) {
+          const linkedAccount = accounts.find(acc => acc.id === baseTxn.linkedAccountId);
+          const linkedTxn = linkedAccount?.transactions?.find(t => t.id === baseTxn.linkedTransactionId);
+          if (linkedTxn) {
+            linkedTxn.recurrenceEndDate = splitEndDate;
+            saveAccounts();
+          }
+        }
+
+        const futureTxn = {
+          id: generateUuid(),
+          date: editData.date,
+          payee: editData.payee,
+          description: editData.description,
+          amount: editData.amount,
+          recurrence: editData.recurrence,
+          notes: editData.notes,
+          excludedDates: [],
+          recurrenceEndDate: null,
+          linkedTransactionId: null,
+          linkedAccountId: null,
+        };
+
+        if (isTransfer) {
+          if (!transferToAccountId) {
+            alert("Please select an account to transfer to.");
+            return;
+          }
+
+          const linkedId = generateUuid();
+          futureTxn.linkedTransactionId = linkedId;
+          futureTxn.linkedAccountId = transferToAccountId;
+
+          const targetAccount = accounts.find(acc => acc.id === transferToAccountId);
+          if (targetAccount) {
+            const linkedTransaction = {
+              id: linkedId,
+              date: editData.date,
+              description: editData.description,
+              payee: editData.payee,
+              notes: editData.notes,
+              amount: -editData.amount,
+              recurrence: editData.recurrence,
+              linkedTransactionId: futureTxn.id,
+              linkedAccountId: activeAccountId,
+              excludedDates: [],
+              recurrenceEndDate: null,
+            };
+            targetAccount.transactions = targetAccount.transactions || [];
+            targetAccount.transactions.push(linkedTransaction);
+            saveAccounts();
+          }
+        }
+
+        transactions.push(futureTxn);
+      } else {
       // Handle unlinking
       if (wasLinked && !isTransfer) {
         deleteLinkedTransaction(baseTxn.linkedTransactionId, baseTxn.linkedAccountId);
@@ -2379,6 +2475,7 @@ function applyEditToTransaction(transactionId, editData, applyToAll) {
       // Update linked transaction if it exists
       if (baseTxn.linkedTransactionId && baseTxn.linkedAccountId) {
         updateLinkedTransaction(baseTxn);
+      }
       }
     }
   } else {
