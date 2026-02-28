@@ -39,6 +39,8 @@ const monthChangeDisplay = document.getElementById("monthChangeDisplay");
 const endBalanceDisplay = document.getElementById("endBalanceDisplay");
 const startingBalanceDisplay = document.getElementById("startingBalanceDisplay");
 const calendarWorkspace = document.getElementById("calendarWorkspace");
+const workspacePanels = document.getElementById("workspacePanels");
+const panelDragHandle = document.getElementById("panelDragHandle");
 const panelLeftBtn = document.getElementById("panelLeftBtn");
 const panelRightBtn = document.getElementById("panelRightBtn");
 const exportCsvButton = document.getElementById("exportCsv");
@@ -157,6 +159,58 @@ if (panelRightBtn) {
 }
 
 applyPanelLayout(getSavedPanelLayout());
+
+if (panelDragHandle && calendarWorkspace) {
+  let pointerStartX = null;
+
+  const movePanelsFromClientX = (clientX) => {
+    const workspaceRect = calendarWorkspace.getBoundingClientRect();
+    const midpoint = workspaceRect.left + workspaceRect.width / 2;
+    setPanelLayout(clientX < midpoint ? "left" : "right");
+  };
+
+  const handlePointerMove = (event) => {
+    if (pointerStartX === null) {
+      return;
+    }
+    event.preventDefault();
+  };
+
+  const handlePointerUp = (event) => {
+    if (pointerStartX === null) {
+      return;
+    }
+
+    const movedDistance = Math.abs(event.clientX - pointerStartX);
+    if (movedDistance >= 8) {
+      movePanelsFromClientX(event.clientX);
+    }
+
+    pointerStartX = null;
+    window.removeEventListener("pointermove", handlePointerMove);
+    window.removeEventListener("pointerup", handlePointerUp);
+  };
+
+  panelDragHandle.addEventListener("pointerdown", (event) => {
+    pointerStartX = event.clientX;
+    window.addEventListener("pointermove", handlePointerMove);
+    window.addEventListener("pointerup", handlePointerUp);
+  });
+
+  panelDragHandle.addEventListener("keydown", (event) => {
+    if (event.key === "ArrowLeft") {
+      event.preventDefault();
+      setPanelLayout("left");
+      return;
+    }
+
+    if (event.key === "ArrowRight") {
+      event.preventDefault();
+      setPanelLayout("right");
+    }
+  });
+}
+
 let pendingEditData = null;
 
 document.getElementById("prevMonth").addEventListener("click", () => {
