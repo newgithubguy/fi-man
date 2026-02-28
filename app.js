@@ -43,6 +43,7 @@ const workspacePanels = document.getElementById("workspacePanels");
 const panelDragHandle = document.getElementById("panelDragHandle");
 const panelLeftBtn = document.getElementById("panelLeftBtn");
 const panelRightBtn = document.getElementById("panelRightBtn");
+const panelBottomBtn = document.getElementById("panelBottomBtn");
 const exportCsvButton = document.getElementById("exportCsv");
 const importCsvInput = document.getElementById("importCsv");
 const importModeSelect = document.getElementById("importMode");
@@ -113,9 +114,10 @@ let editingOccurrenceDate = null;
 function applyPanelLayout(layout) {
   if (!calendarWorkspace) return;
 
-  const normalizedLayout = layout === "left" ? "left" : "right";
+  const normalizedLayout = layout === "left" || layout === "bottom" ? layout : "right";
   calendarWorkspace.classList.toggle("layout-left", normalizedLayout === "left");
   calendarWorkspace.classList.toggle("layout-right", normalizedLayout === "right");
+  calendarWorkspace.classList.toggle("layout-bottom", normalizedLayout === "bottom");
 
   if (panelLeftBtn) {
     panelLeftBtn.setAttribute("aria-pressed", String(normalizedLayout === "left"));
@@ -124,10 +126,14 @@ function applyPanelLayout(layout) {
   if (panelRightBtn) {
     panelRightBtn.setAttribute("aria-pressed", String(normalizedLayout === "right"));
   }
+
+  if (panelBottomBtn) {
+    panelBottomBtn.setAttribute("aria-pressed", String(normalizedLayout === "bottom"));
+  }
 }
 
 function setPanelLayout(layout) {
-  const normalizedLayout = layout === "left" ? "left" : "right";
+  const normalizedLayout = layout === "left" || layout === "bottom" ? layout : "right";
   applyPanelLayout(normalizedLayout);
 
   try {
@@ -140,7 +146,10 @@ function setPanelLayout(layout) {
 function getSavedPanelLayout() {
   try {
     const savedLayout = localStorage.getItem(PANEL_LAYOUT_STORAGE_KEY);
-    return savedLayout === "left" ? "left" : "right";
+    if (savedLayout === "left" || savedLayout === "right" || savedLayout === "bottom") {
+      return savedLayout;
+    }
+    return "right";
   } catch {
     return "right";
   }
@@ -158,13 +167,27 @@ if (panelRightBtn) {
   });
 }
 
+if (panelBottomBtn) {
+  panelBottomBtn.addEventListener("click", () => {
+    setPanelLayout("bottom");
+  });
+}
+
 applyPanelLayout(getSavedPanelLayout());
 
 if (panelDragHandle && calendarWorkspace) {
   let pointerStartX = null;
+  let pointerStartY = null;
 
-  const movePanelsFromClientX = (clientX) => {
+  const movePanelsFromPoint = (clientX, clientY) => {
     const workspaceRect = calendarWorkspace.getBoundingClientRect();
+    const bottomThreshold = workspaceRect.top + workspaceRect.height * 0.62;
+
+    if (clientY >= bottomThreshold) {
+      setPanelLayout("bottom");
+      return;
+    }
+
     const midpoint = workspaceRect.left + workspaceRect.width / 2;
     setPanelLayout(clientX < midpoint ? "left" : "right");
   };
@@ -181,18 +204,20 @@ if (panelDragHandle && calendarWorkspace) {
       return;
     }
 
-    const movedDistance = Math.abs(event.clientX - pointerStartX);
+    const movedDistance = Math.hypot(event.clientX - pointerStartX, event.clientY - pointerStartY);
     if (movedDistance >= 8) {
-      movePanelsFromClientX(event.clientX);
+      movePanelsFromPoint(event.clientX, event.clientY);
     }
 
     pointerStartX = null;
+    pointerStartY = null;
     window.removeEventListener("pointermove", handlePointerMove);
     window.removeEventListener("pointerup", handlePointerUp);
   };
 
   panelDragHandle.addEventListener("pointerdown", (event) => {
     pointerStartX = event.clientX;
+    pointerStartY = event.clientY;
     window.addEventListener("pointermove", handlePointerMove);
     window.addEventListener("pointerup", handlePointerUp);
   });
@@ -207,6 +232,12 @@ if (panelDragHandle && calendarWorkspace) {
     if (event.key === "ArrowRight") {
       event.preventDefault();
       setPanelLayout("right");
+      return;
+    }
+
+    if (event.key === "ArrowDown") {
+      event.preventDefault();
+      setPanelLayout("bottom");
     }
   });
 }
