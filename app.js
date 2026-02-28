@@ -38,6 +38,9 @@ const transactionListTitle = document.getElementById("transactionListTitle");
 const monthChangeDisplay = document.getElementById("monthChangeDisplay");
 const endBalanceDisplay = document.getElementById("endBalanceDisplay");
 const startingBalanceDisplay = document.getElementById("startingBalanceDisplay");
+const calendarWorkspace = document.getElementById("calendarWorkspace");
+const panelLeftBtn = document.getElementById("panelLeftBtn");
+const panelRightBtn = document.getElementById("panelRightBtn");
 const exportCsvButton = document.getElementById("exportCsv");
 const importCsvInput = document.getElementById("importCsv");
 const importModeSelect = document.getElementById("importMode");
@@ -88,6 +91,7 @@ const calculatorKeys = document.getElementById("calculatorKeys");
 const calculatorToggle = document.getElementById("calculatorToggle");
 const calculatorBody = document.getElementById("calculatorBody");
 const graphLink = document.querySelector(".graph-link");
+const PANEL_LAYOUT_STORAGE_KEY = "finance-calendar-panel-layout";
 
 // Account management
 let accounts = [];
@@ -103,6 +107,56 @@ currentMonth.setDate(1);
 let selectedDateKey = toDateKey(new Date());
 let editingTransactionId = null;
 let editingOccurrenceDate = null;
+
+function applyPanelLayout(layout) {
+  if (!calendarWorkspace) return;
+
+  const normalizedLayout = layout === "left" ? "left" : "right";
+  calendarWorkspace.classList.toggle("layout-left", normalizedLayout === "left");
+  calendarWorkspace.classList.toggle("layout-right", normalizedLayout === "right");
+
+  if (panelLeftBtn) {
+    panelLeftBtn.setAttribute("aria-pressed", String(normalizedLayout === "left"));
+  }
+
+  if (panelRightBtn) {
+    panelRightBtn.setAttribute("aria-pressed", String(normalizedLayout === "right"));
+  }
+}
+
+function setPanelLayout(layout) {
+  const normalizedLayout = layout === "left" ? "left" : "right";
+  applyPanelLayout(normalizedLayout);
+
+  try {
+    localStorage.setItem(PANEL_LAYOUT_STORAGE_KEY, normalizedLayout);
+  } catch {
+    // Ignore localStorage failures.
+  }
+}
+
+function getSavedPanelLayout() {
+  try {
+    const savedLayout = localStorage.getItem(PANEL_LAYOUT_STORAGE_KEY);
+    return savedLayout === "left" ? "left" : "right";
+  } catch {
+    return "right";
+  }
+}
+
+if (panelLeftBtn) {
+  panelLeftBtn.addEventListener("click", () => {
+    setPanelLayout("left");
+  });
+}
+
+if (panelRightBtn) {
+  panelRightBtn.addEventListener("click", () => {
+    setPanelLayout("right");
+  });
+}
+
+applyPanelLayout(getSavedPanelLayout());
 let pendingEditData = null;
 
 document.getElementById("prevMonth").addEventListener("click", () => {

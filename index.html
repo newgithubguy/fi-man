@@ -106,86 +106,96 @@
           <strong id="endBalanceDisplay">$0.00</strong>
         </div>
       </div>
-    </section>
 
-    <section class="calendar card">
-      <div class="weekday-header">
-        <span>Sun</span><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span>
+      <div class="layout-controls" role="group" aria-label="Calendar panel layout">
+        <span class="layout-label">Panels</span>
+        <button id="panelLeftBtn" type="button" class="layout-btn" aria-pressed="false">Left of Calendar</button>
+        <button id="panelRightBtn" type="button" class="layout-btn" aria-pressed="true">Right of Calendar</button>
       </div>
-      <div id="calendarGrid" class="grid"></div>
     </section>
 
-    <section class="card form-card">
-      <h3>Add Transaction</h3>
-      <form id="transactionForm" class="transaction-form">
-        <label>
-          Date
-          <input id="dateInput" type="date" required />
-          <span id="dateHint" class="field-hint" aria-live="polite"></span>
-        </label>
-        <label>
-          Payee
-          <input id="payeeInput" type="text" maxlength="60" placeholder="Walmart, Employer, Landlord..." />
-          <span class="field-hint"></span>
-        </label>
-        <label>
-          Description
-          <input id="descriptionInput" type="text" maxlength="80" placeholder="Groceries, Salary, Rent..." required />
-          <span id="descriptionHint" class="field-hint" aria-live="polite"></span>
-        </label>
-        <label>
-          Amount
-          <input id="amountInput" type="number" step="0.01" placeholder="Use negative for expenses" required />
-          <span id="amountHint" class="field-hint" aria-live="polite"></span>
-        </label>
-        <label>
-          Recurrence
-          <select id="recurrenceInput">
-            <option value="one-time" selected>One-time</option>
-            <option value="daily">Daily</option>
-            <option value="weekly">Weekly</option>
-            <option value="bi-weekly">Bi-weekly</option>
-            <option value="monthly">Monthly</option>
-            <option value="quarterly">Quarterly</option>
-            <option value="yearly">Yearly</option>
-          </select>
-          <span class="field-hint"></span>
-        </label>
-        <label class="notes-field">
-          Notes
-          <textarea id="notesInput" maxlength="200" placeholder="Optional notes or memo..."></textarea>
-          <span class="field-hint"></span>
-        </label>
-        <div class="transfer-section">
-          <label class="checkbox-label">
-            <input id="isTransferInput" type="checkbox" />
-            <span>Transfer to another account</span>
-          </label>
-          <label id="transferAccountLabel" class="hidden">
-            Transfer to Account
-            <select id="transferAccountInput">
-            </select>
-          </label>
+    <section id="calendarWorkspace" class="calendar-workspace layout-right">
+      <section class="calendar card">
+        <div class="weekday-header">
+          <span>Sun</span><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span>
         </div>
-        <button type="submit">Add</button>
-      </form>
-    </section>
+        <div id="calendarGrid" class="grid"></div>
+      </section>
 
-    <section class="card">
-      <div class="list-header">
-        <h3 id="transactionListTitle">Transactions</h3>
-        <div class="list-actions">
-          <button id="exportCsv" type="button">Export CSV</button>
-          <select id="importMode" aria-label="Import mode">
-            <option value="merge" selected>Merge Import</option>
-            <option value="replace">Replace Import</option>
-          </select>
-          <label for="importCsv" class="import-label">Import CSV</label>
-          <input id="importCsv" type="file" accept=".csv,text/csv" hidden />
-          <button id="clearAll" type="button" class="danger">Clear All</button>
-        </div>
+      <div class="workspace-panels">
+        <section class="card form-card">
+          <h3>Add Transaction</h3>
+          <form id="transactionForm" class="transaction-form">
+            <label>
+              Date
+              <input id="dateInput" type="date" required />
+              <span id="dateHint" class="field-hint" aria-live="polite"></span>
+            </label>
+            <label>
+              Payee
+              <input id="payeeInput" type="text" maxlength="60" placeholder="Walmart, Employer, Landlord..." />
+              <span class="field-hint"></span>
+            </label>
+            <label>
+              Description
+              <input id="descriptionInput" type="text" maxlength="80" placeholder="Groceries, Salary, Rent..." required />
+              <span id="descriptionHint" class="field-hint" aria-live="polite"></span>
+            </label>
+            <label>
+              Amount
+              <input id="amountInput" type="number" step="0.01" placeholder="Use negative for expenses" required />
+              <span id="amountHint" class="field-hint" aria-live="polite"></span>
+            </label>
+            <label>
+              Recurrence
+              <select id="recurrenceInput">
+                <option value="one-time" selected>One-time</option>
+                <option value="daily">Daily</option>
+                <option value="weekly">Weekly</option>
+                <option value="bi-weekly">Bi-weekly</option>
+                <option value="monthly">Monthly</option>
+                <option value="quarterly">Quarterly</option>
+                <option value="yearly">Yearly</option>
+              </select>
+              <span class="field-hint"></span>
+            </label>
+            <label class="notes-field">
+              Notes
+              <textarea id="notesInput" maxlength="200" placeholder="Optional notes or memo..."></textarea>
+              <span class="field-hint"></span>
+            </label>
+            <div class="transfer-section">
+              <label class="checkbox-label">
+                <input id="isTransferInput" type="checkbox" />
+                <span>Transfer to another account</span>
+              </label>
+              <label id="transferAccountLabel" class="hidden">
+                Transfer to Account
+                <select id="transferAccountInput">
+                </select>
+              </label>
+            </div>
+            <button type="submit">Add</button>
+          </form>
+        </section>
+
+        <section class="card">
+          <div class="list-header">
+            <h3 id="transactionListTitle">Transactions</h3>
+            <div class="list-actions">
+              <button id="exportCsv" type="button">Export CSV</button>
+              <select id="importMode" aria-label="Import mode">
+                <option value="merge" selected>Merge Import</option>
+                <option value="replace">Replace Import</option>
+              </select>
+              <label for="importCsv" class="import-label">Import CSV</label>
+              <input id="importCsv" type="file" accept=".csv,text/csv" hidden />
+              <button id="clearAll" type="button" class="danger">Clear All</button>
+            </div>
+          </div>
+          <ul id="transactionList" class="transaction-list"></ul>
+        </section>
       </div>
-      <ul id="transactionList" class="transaction-list"></ul>
     </section>
   </main>
 
