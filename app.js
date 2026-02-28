@@ -38,8 +38,11 @@ const transactionListTitle = document.getElementById("transactionListTitle");
 const monthChangeDisplay = document.getElementById("monthChangeDisplay");
 const endBalanceDisplay = document.getElementById("endBalanceDisplay");
 const startingBalanceDisplay = document.getElementById("startingBalanceDisplay");
+const topControlsCard = document.querySelector(".controls.card");
 const calendarWorkspace = document.getElementById("calendarWorkspace");
 const workspacePanels = document.getElementById("workspacePanels");
+const calendarWindow = document.getElementById("calendarWindow");
+const calendarDragHandle = document.getElementById("calendarDragHandle");
 const addTransactionWindow = document.getElementById("addTransactionWindow");
 const transactionsWindow = document.getElementById("transactionsWindow");
 const panelDragHandle = document.getElementById("panelDragHandle");
@@ -153,14 +156,38 @@ function syncWorkspacePanelWidth() {
     return;
   }
 
+  const topPanelMaxWidth = Math.max(
+    640,
+    Math.floor(topControlsCard?.getBoundingClientRect().width || 1400),
+  );
+
+  const clampWindowWidth = (element, minimumWidth = 300) => {
+    if (!element) {
+      return minimumWidth;
+    }
+
+    const measuredWidth = Math.ceil(element.getBoundingClientRect().width);
+    const maxWidth = Math.max(minimumWidth, topPanelMaxWidth);
+    const clampedWidth = Math.min(Math.max(minimumWidth, measuredWidth), maxWidth);
+
+    if (measuredWidth !== clampedWidth) {
+      element.style.width = `${clampedWidth}px`;
+    }
+
+    return clampedWidth;
+  };
+
+  const calendarRequestedWidth = clampWindowWidth(calendarWindow, 420);
+
   if (calendarWorkspace.classList.contains("layout-bottom")) {
     calendarWorkspace.style.removeProperty("--workspace-panel-width");
+    calendarWorkspace.style.removeProperty("--workspace-calendar-width");
     return;
   }
 
   const candidateWidths = [addTransactionWindow, transactionsWindow]
     .filter(Boolean)
-    .map((element) => Math.ceil(element.getBoundingClientRect().width));
+    .map((element) => clampWindowWidth(element, 300));
 
   if (!candidateWidths.length) {
     return;
@@ -168,9 +195,25 @@ function syncWorkspacePanelWidth() {
 
   const minimumWidth = 360;
   const requestedWidth = Math.max(minimumWidth, ...candidateWidths);
-  const maxAllowedWidth = Math.max(minimumWidth, Math.floor(calendarWorkspace.clientWidth * 0.6));
+  const maxAllowedWidth = Math.max(
+    minimumWidth,
+    Math.floor(Math.min(calendarWorkspace.clientWidth * 0.6, topPanelMaxWidth - 320)),
+  );
   const nextWidth = Math.min(requestedWidth, maxAllowedWidth);
   calendarWorkspace.style.setProperty("--workspace-panel-width", `${nextWidth}px`);
+
+  const minimumCalendarWidth = 420;
+  const maxCalendarByAvailableSpace = Math.max(
+    minimumCalendarWidth,
+    Math.floor(calendarWorkspace.clientWidth - nextWidth - 16),
+  );
+  const maxCalendarByTopPanel = Math.max(minimumCalendarWidth, topPanelMaxWidth - nextWidth - 16);
+  const nextCalendarWidth = Math.min(
+    Math.max(minimumCalendarWidth, calendarRequestedWidth),
+    maxCalendarByAvailableSpace,
+    maxCalendarByTopPanel,
+  );
+  calendarWorkspace.style.setProperty("--workspace-calendar-width", `${nextCalendarWidth}px`);
 }
 
 function setPanelLayout(layout) {
@@ -220,6 +263,10 @@ if (typeof ResizeObserver !== "undefined") {
   const panelResizeObserver = new ResizeObserver(() => {
     syncWorkspacePanelWidth();
   });
+
+  if (calendarWindow) {
+    panelResizeObserver.observe(calendarWindow);
+  }
 
   if (addTransactionWindow) {
     panelResizeObserver.observe(addTransactionWindow);
@@ -289,6 +336,73 @@ if (panelDragHandle && calendarWorkspace) {
     if (event.key === "ArrowRight") {
       event.preventDefault();
       setPanelLayout("right");
+      return;
+    }
+
+    if (event.key === "ArrowDown") {
+      event.preventDefault();
+      setPanelLayout("bottom");
+    }
+  });
+}
+
+if (calendarDragHandle && calendarWorkspace) {
+  let pointerStartX = null;
+  let pointerStartY = null;
+
+  const moveCalendarFromPoint = (clientX, clientY) => {
+    const workspaceRect = calendarWorkspace.getBoundingClientRect();
+    const bottomThreshold = workspaceRect.top + workspaceRect.height * 0.62;
+
+    if (clientY >= bottomThreshold) {
+      setPanelLayout("bottom");
+      return;
+    }
+
+    const midpoint = workspaceRect.left + workspaceRect.width / 2;
+    setPanelLayout(clientX < midpoint ? "right" : "left");
+  };
+
+  const handlePointerMove = (event) => {
+    if (pointerStartX === null) {
+      return;
+    }
+    event.preventDefault();
+  };
+
+  const handlePointerUp = (event) => {
+    if (pointerStartX === null) {
+      return;
+    }
+
+    const movedDistance = Math.hypot(event.clientX - pointerStartX, event.clientY - pointerStartY);
+    if (movedDistance >= 8) {
+      moveCalendarFromPoint(event.clientX, event.clientY);
+    }
+
+    pointerStartX = null;
+    pointerStartY = null;
+    window.removeEventListener("pointermove", handlePointerMove);
+    window.removeEventListener("pointerup", handlePointerUp);
+  };
+
+  calendarDragHandle.addEventListener("pointerdown", (event) => {
+    pointerStartX = event.clientX;
+    pointerStartY = event.clientY;
+    window.addEventListener("pointermove", handlePointerMove);
+    window.addEventListener("pointerup", handlePointerUp);
+  });
+
+  calendarDragHandle.addEventListener("keydown", (event) => {
+    if (event.key === "ArrowLeft") {
+      event.preventDefault();
+      setPanelLayout("right");
+      return;
+    }
+
+    if (event.key === "ArrowRight") {
+      event.preventDefault();
+      setPanelLayout("left");
       return;
     }
 
