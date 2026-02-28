@@ -26,6 +26,25 @@ npm start
 # Open in browser: http://localhost:3000
 ```
 
+#### Local Run Checklist
+
+1. Install Node.js 18+ (Node.js 20 recommended).
+2. From the project root, run:
+
+```bash
+npm install
+npm start
+```
+
+3. Open `http://localhost:3000`.
+4. If this is first run, register a user account on the login page.
+
+#### Local Troubleshooting
+
+- If port 3000 is in use, stop the process using it and restart `npm start`.
+- If dependencies fail to install, delete `node_modules` and rerun `npm install`.
+- Verify the API is reachable at `http://localhost:3000/api/health`.
+
 ### Option 2: Docker Container (Best for Production/Sharing)
 Requires Docker and Docker Compose.
 
