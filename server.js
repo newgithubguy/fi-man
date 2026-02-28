@@ -373,7 +373,7 @@ app.get('/api/auth/status', (req, res) => {
 app.get('/api/accounts', requireAuth, async (req, res) => {
   try {
     const userId = req.session.userId;
-    const accounts = await dbAll('SELECT * FROM accounts WHERE user_id = ? ORDER BY created_at DESC', [userId]);
+    const accounts = await dbAll('SELECT * FROM accounts WHERE user_id = ? ORDER BY rowid ASC', [userId]);
     
     // Fetch transactions for each account
     const accountsWithTransactions = await Promise.all(
