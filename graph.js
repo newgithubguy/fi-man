@@ -68,6 +68,14 @@ function formatCurrency(value) {
   }).format(value);
 }
 
+function navigateToCalendarDate(dateKey) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(dateKey)) {
+    return;
+  }
+
+  window.location.href = `index.html?date=${encodeURIComponent(dateKey)}`;
+}
+
 function getNextRecurrenceDate(dateStr, recurrence) {
   const date = new Date(dateStr + 'T00:00:00');
   
@@ -325,6 +333,26 @@ function updateChart() {
     options: {
       responsive: true,
       maintainAspectRatio: true,
+      onClick: (event, _elements, chartInstance) => {
+        if (isPie) {
+          return;
+        }
+
+        const points = chartInstance.getElementsAtEventForMode(
+          event,
+          'nearest',
+          { intersect: false },
+          true,
+        );
+
+        if (!points.length) {
+          return;
+        }
+
+        const pointIndex = points[0].index;
+        const selectedDate = chartData.labels[pointIndex];
+        navigateToCalendarDate(selectedDate);
+      },
       interaction: isPie ? undefined : {
         mode: 'index',
         intersect: false,

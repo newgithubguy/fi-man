@@ -111,6 +111,18 @@ let selectedDateKey = toDateKey(new Date());
 let editingTransactionId = null;
 let editingOccurrenceDate = null;
 
+try {
+  const urlParams = new URLSearchParams(window.location.search);
+  const requestedDateKey = urlParams.get("date");
+  if (requestedDateKey && /^\d{4}-\d{2}-\d{2}$/.test(requestedDateKey)) {
+    const [year, month] = requestedDateKey.split("-").map(Number);
+    selectedDateKey = requestedDateKey;
+    currentMonth = new Date(year, month - 1, 1);
+  }
+} catch {
+  // Ignore URL parsing issues and keep defaults.
+}
+
 function applyPanelLayout(layout) {
   if (!calendarWorkspace) return;
 
