@@ -981,6 +981,66 @@ body {
   padding: 8px;
 }
 
+.sidebar-notepad {
+  width: 100%;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 10px;
+  margin-bottom: 12px;
+}
+
+.notepad-header {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-bottom: 8px;
+}
+
+.notepad-header h3 {
+  margin: 0;
+  font-size: 0.9rem;
+}
+
+.notepad-subtitle {
+  color: var(--muted);
+  font-size: 0.75rem;
+}
+
+.recent-transactions-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+  max-height: 180px;
+  overflow-y: auto;
+}
+
+.recent-transactions-list li {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 6px 8px;
+  background: #F8F5F0;
+  font-size: 0.78rem;
+  line-height: 1.3;
+}
+
+.notepad-empty {
+  color: var(--muted);
+}
+
+.quick-notes-input {
+  width: 100%;
+  min-height: 120px;
+  resize: vertical;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px;
+  font: inherit;
+  background: #F8F5F0;
+}
+
 .calculator-header {
   display: flex;
   align-items: center;

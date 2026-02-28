@@ -14,6 +14,24 @@
       <button id="settingsBtn" type="button" class="settings-btn" title="Settings">⚙</button>
     </div>
     <ul id="accountsList" class="accounts-list"></ul>
+
+    <section class="sidebar-notepad" aria-label="Recent manual transactions">
+      <div class="notepad-header">
+        <h3>Recent Transactions</h3>
+        <span class="notepad-subtitle">Last 10 manual entries</span>
+      </div>
+      <ul id="recentTransactionsList" class="recent-transactions-list">
+        <li class="notepad-empty">No manual transactions yet.</li>
+      </ul>
+    </section>
+
+    <section class="sidebar-notepad" aria-label="Quick notes">
+      <div class="notepad-header">
+        <h3>Notes</h3>
+      </div>
+      <textarea id="quickNotesInput" class="quick-notes-input" maxlength="1200" placeholder="Write notes for this account..."></textarea>
+    </section>
+
     <section class="calculator" aria-label="Calculator">
       <div class="calculator-header">
         <h3>Calculator</h3>

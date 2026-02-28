@@ -85,6 +85,8 @@ const exportToDate = document.getElementById("exportToDate");
 const exportTransactionCount = document.getElementById("exportTransactionCount");
 const exportCancel = document.getElementById("exportCancel");
 const accountsList = document.getElementById("accountsList");
+const recentTransactionsList = document.getElementById("recentTransactionsList");
+const quickNotesInput = document.getElementById("quickNotesInput");
 const addAccountBtn = document.getElementById("addAccountBtn");
 const isTransferInput = document.getElementById("isTransferInput");
 const transferAccountInput = document.getElementById("transferAccountInput");
@@ -98,6 +100,8 @@ const calculatorToggle = document.getElementById("calculatorToggle");
 const calculatorBody = document.getElementById("calculatorBody");
 const graphLink = document.querySelector(".graph-link");
 const PANEL_LAYOUT_STORAGE_KEY = "finance-calendar-panel-layout";
+const MANUAL_TRANSACTION_NOTEPAD_KEY = "finance-calendar-manual-transactions-notepad";
+const ACCOUNT_QUICK_NOTES_KEY = "finance-calendar-account-quick-notes";
 
 // Account management
 let accounts = [];
@@ -105,7 +109,101 @@ let activeAccountId = null;
 let transactions = [];
 let payeeHistory = [];
 let descriptionHistory = [];
+let manualTransactionsNotepad = {};
+let accountQuickNotes = {};
 const HISTORY_MAX_ITEMS = 100;
+
+function loadSidebarNotepads() {
+  try {
+    const parsedManualTransactions = JSON.parse(localStorage.getItem(MANUAL_TRANSACTION_NOTEPAD_KEY) || "{}");
+    manualTransactionsNotepad = parsedManualTransactions && typeof parsedManualTransactions === "object" ? parsedManualTransactions : {};
+  } catch {
+    manualTransactionsNotepad = {};
+  }
+
+  try {
+    const parsedQuickNotes = JSON.parse(localStorage.getItem(ACCOUNT_QUICK_NOTES_KEY) || "{}");
+    accountQuickNotes = parsedQuickNotes && typeof parsedQuickNotes === "object" ? parsedQuickNotes : {};
+  } catch {
+    accountQuickNotes = {};
+  }
+}
+
+function saveSidebarNotepads() {
+  try {
+    localStorage.setItem(MANUAL_TRANSACTION_NOTEPAD_KEY, JSON.stringify(manualTransactionsNotepad));
+    localStorage.setItem(ACCOUNT_QUICK_NOTES_KEY, JSON.stringify(accountQuickNotes));
+  } catch {
+    // Ignore localStorage failures.
+  }
+}
+
+function formatManualTransactionNotepadItem(entry) {
+  const amountText = formatCurrency(Number(entry.amount || 0));
+  const descriptionText = entry.description || "Transaction";
+  return `${entry.date || ""} • ${descriptionText} • ${amountText}`;
+}
+
+function renderRecentTransactionsNotepad() {
+  if (!recentTransactionsList) return;
+
+  const accountKey = activeAccountId || "default";
+  const entries = Array.isArray(manualTransactionsNotepad[accountKey]) ? manualTransactionsNotepad[accountKey] : [];
+
+  recentTransactionsList.innerHTML = "";
+
+  if (!entries.length) {
+    const empty = document.createElement("li");
+    empty.className = "notepad-empty";
+    empty.textContent = "No manual transactions yet.";
+    recentTransactionsList.appendChild(empty);
+    return;
+  }
+
+  entries.slice(0, 10).forEach((entry) => {
+    const item = document.createElement("li");
+    item.textContent = formatManualTransactionNotepadItem(entry);
+    recentTransactionsList.appendChild(item);
+  });
+}
+
+function renderQuickNotesNotepad() {
+  if (!quickNotesInput) return;
+  const accountKey = activeAccountId || "default";
+  quickNotesInput.value = accountQuickNotes[accountKey] || "";
+}
+
+function renderSidebarNotepads() {
+  renderRecentTransactionsNotepad();
+  renderQuickNotesNotepad();
+}
+
+function recordManualTransactionForNotepad(transaction) {
+  if (!transaction) return;
+  const accountKey = activeAccountId || "default";
+  const currentEntries = Array.isArray(manualTransactionsNotepad[accountKey]) ? manualTransactionsNotepad[accountKey] : [];
+  const nextEntries = [
+    {
+      date: transaction.date,
+      description: transaction.description,
+      amount: transaction.amount,
+      id: transaction.id,
+    },
+    ...currentEntries,
+  ].slice(0, 10);
+
+  manualTransactionsNotepad[accountKey] = nextEntries;
+  saveSidebarNotepads();
+  renderRecentTransactionsNotepad();
+}
+
+if (quickNotesInput) {
+  quickNotesInput.addEventListener("input", () => {
+    const accountKey = activeAccountId || "default";
+    accountQuickNotes[accountKey] = quickNotesInput.value;
+    saveSidebarNotepads();
+  });
+}
 
 // Initialize async
 let currentMonth = new Date();
@@ -999,6 +1097,7 @@ transactionForm.addEventListener("submit", (event) => {
   if (payee) payeeHistory = addToHistory(payee, payeeHistory);
   if (description) descriptionHistory = addToHistory(description, descriptionHistory);
   saveEntryHistories();
+  recordManualTransactionForNotepad(newTransaction);
 
   commitTransactions(nextTransactions);
   transactionForm.reset();
@@ -2091,6 +2190,7 @@ function switchAccount(accountId) {
   activeAccountId = accountId;
   saveActiveAccountId();
   transactions = loadTransactions();
+  renderSidebarNotepads();
   render();
 }
 
@@ -2148,6 +2248,9 @@ function deleteAccount(accountId) {
   }
   
   accounts = accounts.filter(acc => acc.id !== accountId);
+  delete manualTransactionsNotepad[accountId];
+  delete accountQuickNotes[accountId];
+  saveSidebarNotepads();
   
   if (activeAccountId === accountId) {
     activeAccountId = accounts[0].id;
@@ -2189,6 +2292,9 @@ async function deleteAllData() {
     transactions = [];
     payeeHistory = [];
     descriptionHistory = [];
+    manualTransactionsNotepad = {};
+    accountQuickNotes = {};
+    saveSidebarNotepads();
     
     // Reload to get fresh state
     await initialize();
@@ -2876,6 +2982,7 @@ function focusEntryFieldAfterDatePick() {
 
 async function initialize() {
   try {
+    loadSidebarNotepads();
     // Check authentication first
     const authResponse = await fetch(`${API_BASE_URL}/auth/status`, {
       credentials: 'include'
@@ -2943,6 +3050,7 @@ async function initialize() {
     if (dateInput) dateInput.value = selectedDateKey;
     if (transferAccountInput) updateTransferAccountOptions(transferAccountInput, transferAccountLabel);
     if (editTransferAccountInput) updateTransferAccountOptions(editTransferAccountInput, editTransferAccountLabel);
+    renderSidebarNotepads();
     
     render();
   } catch (error) {
