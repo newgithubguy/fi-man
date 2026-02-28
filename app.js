@@ -1754,6 +1754,7 @@ function renderCalendar() {
     const date = new Date(gridStart.getFullYear(), gridStart.getMonth(), gridStart.getDate() + cell);
     const dateKey = toDateKey(date);
     const isCurrentMonth = date.getMonth() === month;
+    const isWeekend = date.getDay() === 0 || date.getDay() === 6;
     const dayAmount = dailyTotals.get(dateKey) || 0;
 
     if (isCurrentMonth) {
@@ -1763,6 +1764,10 @@ function renderCalendar() {
 
     const day = document.createElement("article");
     day.className = `day${isCurrentMonth ? "" : " other-month"}`;
+
+    if (isCurrentMonth && isWeekend) {
+      day.classList.add("weekend-day");
+    }
 
     if (isCurrentMonth) {
       day.classList.add("clickable-day");
