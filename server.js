@@ -93,13 +93,34 @@ function initializeDatabase() {
         description TEXT NOT NULL,
         notes TEXT,
         amount REAL NOT NULL,
+        color TEXT,
         recurrence TEXT,
+        excluded_dates TEXT,
+        recurrence_end_date TEXT,
         linked_transaction_id TEXT,
         linked_account_id TEXT,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (account_id) REFERENCES accounts(id)
       )
     `);
+
+    db.run('ALTER TABLE transactions ADD COLUMN color TEXT', (err) => {
+      if (err && !String(err.message || '').includes('duplicate column name')) {
+        console.error('Error adding color column:', err);
+      }
+    });
+
+    db.run('ALTER TABLE transactions ADD COLUMN excluded_dates TEXT', (err) => {
+      if (err && !String(err.message || '').includes('duplicate column name')) {
+        console.error('Error adding excluded_dates column:', err);
+      }
+    });
+
+    db.run('ALTER TABLE transactions ADD COLUMN recurrence_end_date TEXT', (err) => {
+      if (err && !String(err.message || '').includes('duplicate column name')) {
+        console.error('Error adding recurrence_end_date column:', err);
+      }
+    });
 
     // Create active account table (per user)
     db.run(`
@@ -385,13 +406,27 @@ app.get('/api/accounts', requireAuth, async (req, res) => {
         
         // Map transactions to camelCase
         const mappedTransactions = transactions.map((txn) => ({
+          excludedDates: (() => {
+            if (!txn.excluded_dates) {
+              return [];
+            }
+
+            try {
+              const parsed = JSON.parse(txn.excluded_dates);
+              return Array.isArray(parsed) ? parsed : [];
+            } catch {
+              return [];
+            }
+          })(),
           id: txn.id,
           date: txn.date,
           payee: txn.payee,
           description: txn.description,
           notes: txn.notes,
           amount: txn.amount,
+          color: txn.color || null,
           recurrence: txn.recurrence,
+          recurrenceEndDate: txn.recurrence_end_date || null,
           linkedTransactionId: txn.linked_transaction_id || null,
           linkedAccountId: txn.linked_account_id || null,
         }));
@@ -439,8 +474,8 @@ app.post('/api/accounts', requireAuth, async (req, res) => {
       for (const txn of account.transactions || []) {
         await dbRun(
           `INSERT OR REPLACE INTO transactions 
-           (id, account_id, date, payee, description, notes, amount, recurrence, linked_transaction_id, linked_account_id)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+           (id, account_id, date, payee, description, notes, amount, color, recurrence, excluded_dates, recurrence_end_date, linked_transaction_id, linked_account_id)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
           [
             txn.id,
             account.id,
@@ -449,7 +484,10 @@ app.post('/api/accounts', requireAuth, async (req, res) => {
             txn.description,
             txn.notes,
             txn.amount,
+            txn.color || null,
             txn.recurrence,
+            JSON.stringify(Array.isArray(txn.excludedDates) ? txn.excludedDates : []),
+            txn.recurrenceEndDate || null,
             txn.linkedTransactionId,
             txn.linkedAccountId
           ]
@@ -483,9 +521,23 @@ app.post('/api/transactions', requireAuth, async (req, res) => {
     for (const txn of transactions) {
       await dbRun(
         `INSERT INTO transactions 
-         (id, account_id, date, payee, description, notes, amount, recurrence, linked_transaction_id, linked_account_id)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [txn.id, accountId, txn.date, txn.payee, txn.description, txn.notes, txn.amount, txn.recurrence, txn.linkedTransactionId, txn.linkedAccountId]
+         (id, account_id, date, payee, description, notes, amount, color, recurrence, excluded_dates, recurrence_end_date, linked_transaction_id, linked_account_id)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+          txn.id,
+          accountId,
+          txn.date,
+          txn.payee,
+          txn.description,
+          txn.notes,
+          txn.amount,
+          txn.color || null,
+          txn.recurrence,
+          JSON.stringify(Array.isArray(txn.excludedDates) ? txn.excludedDates : []),
+          txn.recurrenceEndDate || null,
+          txn.linkedTransactionId,
+          txn.linkedAccountId
+        ]
       );
     }
     

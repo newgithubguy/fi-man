@@ -31,6 +31,7 @@ const descriptionHint = document.getElementById("descriptionHint");
 const payeeInput = document.getElementById("payeeInput");
 const notesInput = document.getElementById("notesInput");
 const amountInput = document.getElementById("amountInput");
+const colorInput = document.getElementById("colorInput");
 const amountHint = document.getElementById("amountHint");
 const recurrenceInput = document.getElementById("recurrenceInput");
 const recurrenceEndDateInput = document.getElementById("recurrenceEndDateInput");
@@ -75,6 +76,7 @@ const editPayeeInput = document.getElementById("editPayeeInput");
 const editDescriptionInput = document.getElementById("editDescriptionInput");
 const editDescriptionHint = document.getElementById("editDescriptionHint");
 const editAmountInput = document.getElementById("editAmountInput");
+const editColorInput = document.getElementById("editColorInput");
 const editAmountHint = document.getElementById("editAmountHint");
 const editRecurrenceInput = document.getElementById("editRecurrenceInput");
 const editRecurrenceEndDateInput = document.getElementById("editRecurrenceEndDateInput");
@@ -110,6 +112,7 @@ const graphLink = document.querySelector(".graph-link");
 const PANEL_LAYOUT_STORAGE_KEY = "finance-calendar-panel-layout";
 const MANUAL_TRANSACTION_NOTEPAD_KEY = "finance-calendar-manual-transactions-notepad";
 const ACCOUNT_QUICK_NOTES_KEY = "finance-calendar-account-quick-notes";
+const DEFAULT_TRANSACTION_COLOR = "#3b82f6";
 
 // Account management
 let accounts = [];
@@ -222,6 +225,19 @@ let editingOccurrenceDate = null;
 
 function isRecurringRecurrence(value) {
   return Boolean(value) && value !== "one-time" && value !== "none";
+}
+
+function normalizeTransactionColor(value) {
+  if (typeof value !== "string") {
+    return DEFAULT_TRANSACTION_COLOR;
+  }
+
+  const trimmed = value.trim();
+  if (/^#[0-9a-fA-F]{6}$/.test(trimmed)) {
+    return trimmed.toLowerCase();
+  }
+
+  return DEFAULT_TRANSACTION_COLOR;
 }
 
 function updateRecurrenceEndDateFieldVisibility() {
@@ -1114,6 +1130,7 @@ transactionForm.addEventListener("submit", (event) => {
   const payee = payeeInput.value.trim();
   const notes = notesInput.value.trim();
   const amount = Number(amountInput.value);
+  const color = normalizeTransactionColor(colorInput ? colorInput.value : DEFAULT_TRANSACTION_COLOR);
   const recurrence = recurrenceInput.value;
   const recurrenceEndDateValue = recurrenceEndDateInput ? recurrenceEndDateInput.value : "";
   const isTransfer = isTransferInput.checked;
@@ -1152,6 +1169,7 @@ transactionForm.addEventListener("submit", (event) => {
     payee,
     notes,
     amount,
+    color,
     recurrence,
     recurrenceEndDate,
     linkedTransactionId,
@@ -1171,6 +1189,7 @@ transactionForm.addEventListener("submit", (event) => {
         payee,
         notes,
         amount: -amount, // Opposite amount
+        color,
         recurrence,
         recurrenceEndDate,
         linkedTransactionId: newTransactionId,
@@ -1191,6 +1210,9 @@ transactionForm.addEventListener("submit", (event) => {
 
   commitTransactions(nextTransactions);
   transactionForm.reset();
+  if (colorInput) {
+    colorInput.value = DEFAULT_TRANSACTION_COLOR;
+  }
   recurrenceInput.value = "one-time";
   updateRecurrenceEndDateFieldVisibility();
   dateInput.value = selectedDateKey;
@@ -1225,6 +1247,7 @@ function loadTransactions() {
         description: entry.description,
         notes: entry.notes || '',
         amount: Number(entry.amount),
+        color: normalizeTransactionColor(entry.color),
         recurrence: entry.recurrence || 'one-time',
         excludedDates: Array.isArray(entry.excludedDates) ? entry.excludedDates : [],
         recurrenceEndDate: typeof entry.recurrenceEndDate === "string" && /^\d{4}-\d{2}-\d{2}$/.test(entry.recurrenceEndDate)
@@ -2504,6 +2527,7 @@ function updateLinkedTransaction(txn) {
       linkedTxn.payee = txn.payee;
       linkedTxn.notes = txn.notes;
       linkedTxn.amount = -txn.amount; // Keep opposite amount
+      linkedTxn.color = normalizeTransactionColor(txn.color);
       linkedTxn.recurrence = txn.recurrence;
       linkedTxn.recurrenceEndDate = txn.recurrenceEndDate || null;
       saveAccounts();
@@ -2733,6 +2757,9 @@ function openEditTransactionModal(transactionId, sourceItem = null) {
   editPayeeInput.value = txn.payee || '';
   editDescriptionInput.value = txn.description || '';
   editAmountInput.value = txn.amount;
+  if (editColorInput) {
+    editColorInput.value = normalizeTransactionColor(txn.color);
+  }
   setEditDateValidationHint();
   setEditDescriptionValidationHint();
   setEditAmountValidationHint();
@@ -2786,6 +2813,7 @@ editTransactionForm.addEventListener("submit", (event) => {
   const editedNotes = editNotesInput.value.trim();
   const editedRecurrence = editRecurrenceInput.value;
   const editedAmount = Number(editAmountInput.value);
+  const editedColor = normalizeTransactionColor(editColorInput ? editColorInput.value : DEFAULT_TRANSACTION_COLOR);
   const editedRecurrenceEndDateValue = editRecurrenceEndDateInput ? editRecurrenceEndDateInput.value : "";
 
   const editDateValidationMessage = setEditDateValidationHint({ showRequiredWhenEmpty: true });
@@ -2829,6 +2857,7 @@ editTransactionForm.addEventListener("submit", (event) => {
     payee: editPayeeInput.value.trim(),
     description: editDescriptionInput.value.trim(),
     amount: Number(editAmountInput.value),
+    color: editedColor,
     recurrence: editRecurrenceInput.value,
     recurrenceEndDate: editedRecurrenceEndDate,
     notes: editNotesInput.value.trim(),
@@ -2917,6 +2946,7 @@ function applyEditToTransaction(transactionId, editData, applyToAll) {
           payee: editData.payee,
           description: editData.description,
           amount: editData.amount,
+          color: editData.color,
           recurrence: editData.recurrence,
           notes: editData.notes,
           excludedDates: [],
@@ -2944,6 +2974,7 @@ function applyEditToTransaction(transactionId, editData, applyToAll) {
               payee: editData.payee,
               notes: editData.notes,
               amount: -editData.amount,
+              color: editData.color,
               recurrence: editData.recurrence,
               linkedTransactionId: futureTxn.id,
               linkedAccountId: activeAccountId,
@@ -2984,6 +3015,7 @@ function applyEditToTransaction(transactionId, editData, applyToAll) {
             payee: editData.payee,
             notes: editData.notes,
             amount: -editData.amount,
+            color: editData.color,
             recurrence: editData.recurrence,
             recurrenceEndDate: editData.recurrenceEndDate,
             linkedTransactionId: baseTxn.id,
@@ -3012,6 +3044,7 @@ function applyEditToTransaction(transactionId, editData, applyToAll) {
             payee: editData.payee,
             notes: editData.notes,
             amount: -editData.amount,
+            color: editData.color,
             recurrence: editData.recurrence,
             recurrenceEndDate: editData.recurrenceEndDate,
             linkedTransactionId: baseTxn.id,
@@ -3028,6 +3061,7 @@ function applyEditToTransaction(transactionId, editData, applyToAll) {
       baseTxn.payee = editData.payee;
       baseTxn.description = editData.description;
       baseTxn.amount = editData.amount;
+      baseTxn.color = editData.color;
       baseTxn.recurrence = editData.recurrence;
       baseTxn.recurrenceEndDate = editData.recurrenceEndDate;
       baseTxn.notes = editData.notes;
@@ -3062,6 +3096,7 @@ function applyEditToTransaction(transactionId, editData, applyToAll) {
         payee: editData.payee,
         description: editData.description,
         amount: editData.amount,
+        color: editData.color,
         recurrence: 'one-time',
         recurrenceEndDate: null,
         notes: editData.notes
@@ -3086,6 +3121,7 @@ function applyEditToTransaction(transactionId, editData, applyToAll) {
             payee: editData.payee,
             notes: editData.notes,
             amount: -editData.amount,
+            color: editData.color,
             recurrence: 'one-time',
             recurrenceEndDate: null,
             linkedTransactionId: newTxn.id,
@@ -3126,6 +3162,7 @@ function applyEditToTransaction(transactionId, editData, applyToAll) {
             payee: editData.payee,
             notes: editData.notes,
             amount: -editData.amount,
+            color: editData.color,
             recurrence: editData.recurrence,
             recurrenceEndDate: editData.recurrenceEndDate,
             linkedTransactionId: txn.id,
@@ -3154,6 +3191,7 @@ function applyEditToTransaction(transactionId, editData, applyToAll) {
             payee: editData.payee,
             notes: editData.notes,
             amount: -editData.amount,
+            color: editData.color,
             recurrence: editData.recurrence,
             recurrenceEndDate: editData.recurrenceEndDate,
             linkedTransactionId: txn.id,
@@ -3170,6 +3208,7 @@ function applyEditToTransaction(transactionId, editData, applyToAll) {
       txn.payee = editData.payee;
       txn.description = editData.description;
       txn.amount = editData.amount;
+      txn.color = editData.color;
       txn.recurrence = editData.recurrence;
       txn.recurrenceEndDate = editData.recurrenceEndDate;
       txn.notes = editData.notes;
@@ -3275,6 +3314,7 @@ async function initialize() {
     
     // Initialize UI
     if (dateInput) dateInput.value = selectedDateKey;
+    if (colorInput) colorInput.value = DEFAULT_TRANSACTION_COLOR;
     updateRecurrenceEndDateFieldVisibility();
     setRecurrenceEndDateValidationHint();
     if (transferAccountInput) updateTransferAccountOptions(transferAccountInput, transferAccountLabel);

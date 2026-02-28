@@ -176,6 +176,11 @@
               <span id="amountHint" class="field-hint" aria-live="polite"></span>
             </label>
             <label>
+              Color
+              <input id="colorInput" type="color" value="#3b82f6" aria-label="Transaction color" />
+              <span class="field-hint"></span>
+            </label>
+            <label>
               Recurrence
               <select id="recurrenceInput">
                 <option value="one-time" selected>One-time</option>
@@ -283,6 +288,11 @@
           Amount
           <input id="editAmountInput" type="number" step="0.01" placeholder="Use negative for expenses" required />
           <span id="editAmountHint" class="field-hint" aria-live="polite"></span>
+        </label>
+        <label>
+          Color
+          <input id="editColorInput" type="color" value="#3b82f6" aria-label="Transaction color" />
+          <span class="field-hint"></span>
         </label>
         <label>
           Recurrence

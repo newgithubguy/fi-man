@@ -20,6 +20,32 @@ let activeAccountId = null;
 let transactions = [];
 let viewMode = "timeRange";
 
+const DEFAULT_EXPENSE_COLORS = [
+  '#ef4444', '#f97316', '#f59e0b', '#eab308', '#84cc16',
+  '#22c55e', '#10b981', '#14b8a6', '#06b6d4', '#0ea5e9',
+  '#3b82f6', '#6366f1', '#8b5cf6', '#a855f7', '#d946ef',
+  '#ec4899', '#f43f5e'
+];
+
+const DEFAULT_INCOME_COLORS = [
+  '#10b981', '#14b8a6', '#06b6d4', '#0ea5e9', '#3b82f6',
+  '#6366f1', '#8b5cf6', '#a855f7', '#22c55e', '#84cc16',
+  '#eab308', '#f59e0b', '#f97316', '#ef4444', '#ec4899'
+];
+
+function normalizeColor(value) {
+  if (typeof value !== 'string') {
+    return null;
+  }
+
+  const trimmed = value.trim();
+  if (/^#[0-9a-fA-F]{6}$/.test(trimmed)) {
+    return trimmed.toLowerCase();
+  }
+
+  return null;
+}
+
 async function loadAccountsFromAPI() {
   try {
     const response = await fetch(`${API_BASE_URL}/accounts`);
@@ -105,8 +131,11 @@ function expandRecurringTransactions(startDate, endDate) {
   const endKey = toDateKey(endDate);
   
   for (const txn of transactions) {
+    const excludedDates = new Set(Array.isArray(txn.excludedDates) ? txn.excludedDates : []);
+    const recurrenceEndDate = typeof txn.recurrenceEndDate === 'string' ? txn.recurrenceEndDate : null;
+
     // Add the original transaction if it's in range
-    if (txn.date >= startKey && txn.date <= endKey) {
+    if (txn.date >= startKey && txn.date <= endKey && !excludedDates.has(txn.date)) {
       expanded.push(txn);
     }
     
@@ -118,8 +147,9 @@ function expandRecurringTransactions(startDate, endDate) {
       while (true) {
         const nextDate = getNextRecurrenceDate(currentDate, txn.recurrence);
         if (!nextDate || nextDate > endKey) break;
+        if (recurrenceEndDate && nextDate > recurrenceEndDate) break;
         
-        if (nextDate >= startKey) {
+        if (nextDate >= startKey && !excludedDates.has(nextDate)) {
           expanded.push({
             ...txn,
             id: `${txn.id}-recur-${nextDate}`,
@@ -137,6 +167,28 @@ function expandRecurringTransactions(startDate, endDate) {
   return expanded;
 }
 
+function selectCategoryColorsByAmount(categoryColorWeights) {
+  const categoryColors = new Map();
+
+  for (const [category, colorWeights] of categoryColorWeights.entries()) {
+    let selectedColor = null;
+    let maxWeight = -1;
+
+    for (const [color, weight] of colorWeights.entries()) {
+      if (weight > maxWeight) {
+        maxWeight = weight;
+        selectedColor = color;
+      }
+    }
+
+    if (selectedColor) {
+      categoryColors.set(category, selectedColor);
+    }
+  }
+
+  return categoryColors;
+}
+
 function prepareCategoryData(days) {
   const endDate = new Date();
   const startDate = new Date();
@@ -146,20 +198,33 @@ function prepareCategoryData(days) {
   
   const expensesByCategory = new Map();
   const incomeByCategory = new Map();
+  const expenseColorWeights = new Map();
+  const incomeColorWeights = new Map();
   let totalIncome = 0;
   let totalExpenses = 0;
   
   for (const txn of allTransactions) {
     const category = txn.description || 'Uncategorized';
     const amount = Math.abs(txn.amount);
+    const color = normalizeColor(txn.color);
     
     if (txn.amount < 0) {
       // Expense
       expensesByCategory.set(category, (expensesByCategory.get(category) || 0) + amount);
+      if (color) {
+        const colorWeights = expenseColorWeights.get(category) || new Map();
+        colorWeights.set(color, (colorWeights.get(color) || 0) + amount);
+        expenseColorWeights.set(category, colorWeights);
+      }
       totalExpenses += amount;
     } else if (txn.amount > 0) {
       // Income
       incomeByCategory.set(category, (incomeByCategory.get(category) || 0) + amount);
+      if (color) {
+        const colorWeights = incomeColorWeights.get(category) || new Map();
+        colorWeights.set(color, (colorWeights.get(color) || 0) + amount);
+        incomeColorWeights.set(category, colorWeights);
+      }
       totalIncome += amount;
     }
   }
@@ -167,6 +232,8 @@ function prepareCategoryData(days) {
   return {
     expensesByCategory,
     incomeByCategory,
+    expenseCategoryColors: selectCategoryColorsByAmount(expenseColorWeights),
+    incomeCategoryColors: selectCategoryColorsByAmount(incomeColorWeights),
     totalIncome,
     totalExpenses,
   };
@@ -180,20 +247,33 @@ function prepareMonthCategoryData(year, month) {
   
   const expensesByCategory = new Map();
   const incomeByCategory = new Map();
+  const expenseColorWeights = new Map();
+  const incomeColorWeights = new Map();
   let totalIncome = 0;
   let totalExpenses = 0;
   
   for (const txn of allTransactions) {
     const category = txn.description || 'Uncategorized';
     const amount = Math.abs(txn.amount);
+    const color = normalizeColor(txn.color);
     
     if (txn.amount < 0) {
       // Expense
       expensesByCategory.set(category, (expensesByCategory.get(category) || 0) + amount);
+      if (color) {
+        const colorWeights = expenseColorWeights.get(category) || new Map();
+        colorWeights.set(color, (colorWeights.get(color) || 0) + amount);
+        expenseColorWeights.set(category, colorWeights);
+      }
       totalExpenses += amount;
     } else if (txn.amount > 0) {
       // Income
       incomeByCategory.set(category, (incomeByCategory.get(category) || 0) + amount);
+      if (color) {
+        const colorWeights = incomeColorWeights.get(category) || new Map();
+        colorWeights.set(color, (colorWeights.get(color) || 0) + amount);
+        incomeColorWeights.set(category, colorWeights);
+      }
       totalIncome += amount;
     }
   }
@@ -201,6 +281,8 @@ function prepareMonthCategoryData(year, month) {
   return {
     expensesByCategory,
     incomeByCategory,
+    expenseCategoryColors: selectCategoryColorsByAmount(expenseColorWeights),
+    incomeCategoryColors: selectCategoryColorsByAmount(incomeColorWeights),
     totalIncome,
     totalExpenses,
   };
@@ -289,6 +371,9 @@ function updateCharts() {
     const expenseCtx = document.getElementById('expensesChart').getContext('2d');
     const expenseLabels = Array.from(categoryData.expensesByCategory.keys());
     const expenseData = Array.from(categoryData.expensesByCategory.values());
+    const expenseColors = expenseLabels.map((category, index) => {
+      return categoryData.expenseCategoryColors.get(category) || DEFAULT_EXPENSE_COLORS[index % DEFAULT_EXPENSE_COLORS.length];
+    });
     
     expensesChart = new Chart(expenseCtx, {
       type: 'doughnut',
@@ -296,12 +381,7 @@ function updateCharts() {
         labels: expenseLabels,
         datasets: [{
           data: expenseData,
-          backgroundColor: [
-            '#ef4444', '#f97316', '#f59e0b', '#eab308', '#84cc16',
-            '#22c55e', '#10b981', '#14b8a6', '#06b6d4', '#0ea5e9',
-            '#3b82f6', '#6366f1', '#8b5cf6', '#a855f7', '#d946ef',
-            '#ec4899', '#f43f5e'
-          ],
+          backgroundColor: expenseColors,
           borderWidth: 2,
           borderColor: '#fff'
         }]
@@ -344,6 +424,9 @@ function updateCharts() {
     const incomeCtx = document.getElementById('incomeChart').getContext('2d');
     const incomeLabels = Array.from(categoryData.incomeByCategory.keys());
     const incomeData = Array.from(categoryData.incomeByCategory.values());
+    const incomeColors = incomeLabels.map((category, index) => {
+      return categoryData.incomeCategoryColors.get(category) || DEFAULT_INCOME_COLORS[index % DEFAULT_INCOME_COLORS.length];
+    });
     
     incomeChart = new Chart(incomeCtx, {
       type: 'doughnut',
@@ -351,11 +434,7 @@ function updateCharts() {
         labels: incomeLabels,
         datasets: [{
           data: incomeData,
-          backgroundColor: [
-            '#10b981', '#14b8a6', '#06b6d4', '#0ea5e9', '#3b82f6',
-            '#6366f1', '#8b5cf6', '#a855f7', '#22c55e', '#84cc16',
-            '#eab308', '#f59e0b', '#f97316', '#ef4444', '#ec4899'
-          ],
+          backgroundColor: incomeColors,
           borderWidth: 2,
           borderColor: '#fff'
         }]
