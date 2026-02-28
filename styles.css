@@ -448,6 +448,17 @@ body {
   align-items: start;
 }
 
+.workspace-panels .resizable-window {
+  resize: vertical;
+  overflow: auto;
+  min-height: 220px;
+  max-height: 80vh;
+}
+
+#transactionsWindow {
+  min-height: 280px;
+}
+
 .panel-drag-handle {
   border: 1px dashed var(--border);
   border-radius: 8px;

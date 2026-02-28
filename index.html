@@ -125,7 +125,7 @@
 
       <div id="workspacePanels" class="workspace-panels">
         <div id="panelDragHandle" class="panel-drag-handle" role="button" tabindex="0" aria-label="Drag panels left or right">↔ Drag panels left/right</div>
-        <section class="card form-card">
+        <section id="addTransactionWindow" class="card form-card resizable-window">
           <h3>Add Transaction</h3>
           <form id="transactionForm" class="transaction-form">
             <label>
@@ -181,7 +181,7 @@
           </form>
         </section>
 
-        <section class="card">
+        <section id="transactionsWindow" class="card resizable-window">
           <div class="list-header">
             <h3 id="transactionListTitle">Transactions</h3>
             <div class="list-actions">
