@@ -434,11 +434,10 @@ body {
 }
 
 .calendar-workspace {
-  --workspace-panel-width: minmax(360px, 420px);
   max-width: 1400px;
   width: 100%;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) var(--workspace-panel-width);
+  grid-template-columns: minmax(0, 1fr) auto;
   gap: 16px;
   align-items: start;
 }
@@ -457,6 +456,9 @@ body {
   display: grid;
   gap: 16px;
   align-items: start;
+  width: fit-content;
+  max-width: 100%;
+  justify-self: start;
 }
 
 .workspace-panels .resizable-window {
