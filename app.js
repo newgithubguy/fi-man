@@ -37,6 +37,7 @@ const transactionList = document.getElementById("transactionList");
 const transactionListTitle = document.getElementById("transactionListTitle");
 const monthChangeDisplay = document.getElementById("monthChangeDisplay");
 const endBalanceDisplay = document.getElementById("endBalanceDisplay");
+const endOfYearBalanceDisplay = document.getElementById("endOfYearBalanceDisplay");
 const startingBalanceDisplay = document.getElementById("startingBalanceDisplay");
 const calendarWorkspace = document.getElementById("calendarWorkspace");
 const workspacePanels = document.getElementById("workspacePanels");
@@ -1896,10 +1897,14 @@ function renderCalendar() {
 
   startingBalanceDisplay.textContent = formatCurrency(startingBalance);
   monthChangeDisplay.textContent = formatCurrency(monthChange);
-  endBalanceDisplay.textContent = formatCurrency(startingBalance + monthChange);
+  const endOfMonthBalance = startingBalance + monthChange;
+  endBalanceDisplay.textContent = formatCurrency(endOfMonthBalance);
+  const endOfYearBalance = getBalanceBefore(`${year + 1}-01-01`);
+  endOfYearBalanceDisplay.textContent = formatCurrency(endOfYearBalance);
 
   monthChangeDisplay.className = monthChange === 0 ? "" : monthChange > 0 ? "positive" : "negative";
-  endBalanceDisplay.className = startingBalance + monthChange === 0 ? "" : startingBalance + monthChange > 0 ? "positive" : "negative";
+  endBalanceDisplay.className = endOfMonthBalance === 0 ? "" : endOfMonthBalance > 0 ? "positive" : "negative";
+  endOfYearBalanceDisplay.className = endOfYearBalance === 0 ? "" : endOfYearBalance > 0 ? "positive" : "negative";
 }
 
 function renderTransactions() {
