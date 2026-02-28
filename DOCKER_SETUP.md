@@ -76,6 +76,17 @@ docker compose build --no-cache
 docker compose up -d
 ```
 
+## Refresh Docker Image Explicitly
+
+If you want to force-refresh the local image before starting containers:
+
+```bash
+docker compose down
+docker image rm finance-calendar || true
+docker compose build --no-cache
+docker compose up -d
+```
+
 After rebuilding, do a hard refresh in your browser (clears cached files):
 - **Windows/Linux:** Ctrl + Shift + R or Ctrl + F5
 - **Mac:** Cmd + Shift + R

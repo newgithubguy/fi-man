@@ -16,8 +16,6 @@ This guide shows how to deploy the Finance Calendar app using Portainer.
 4. Paste the compose file below:
 
 ```yaml
-version: '3.8'
-
 services:
   finance-calendar:
     build:
@@ -31,6 +29,7 @@ services:
     environment:
       - TZ=UTC
       - NODE_ENV=production
+      - DB_PATH=/data/finance.db
       - SESSION_SECRET=change-this-to-random-secret-in-production
     restart: unless-stopped
     healthcheck:
@@ -56,6 +55,17 @@ Access the app:
 1. Go to Stacks -> finance-calendar
 2. Click Pull and redeploy (Git stack)
 3. If changes do not appear, rebuild using the command line with --no-cache
+
+### Force Image Refresh in Portainer
+
+If code changes are not reflected after redeploy:
+
+1. Open the stack in Portainer
+2. Click **Stop this stack**
+3. In the stack editor, keep the same compose content and click **Update the stack**
+4. If needed, remove the old image from Portainer (Images tab) and redeploy
+
+This ensures the Docker image is rebuilt from the latest GitHub `master` branch.
 
 ## Command Line Rebuild (If Needed)
 
