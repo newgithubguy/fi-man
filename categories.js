@@ -52,7 +52,11 @@ async function loadAccountsFromAPI() {
     if (!response.ok) {
       throw new Error('Failed to load accounts');
     }
-    return await response.json();
+    const loadedAccounts = await response.json();
+    return loadedAccounts.map((account) => ({
+      ...account,
+      transactions: (account.transactions || []).filter((txn) => !txn.isRecurringInstance),
+    }));
   } catch (error) {
     console.error('Error loading accounts:', error);
     return [];
