@@ -105,7 +105,7 @@ Open `index.html` directly in your browser for a basic offline experience (no pe
 3. Move between months with arrow buttons.
 4. Review daily and balance totals directly in the calendar.
 5. Click on a day to view all transactions for that specific date (including recurring instances).
-6. Use the **First Negative** summary box (next to End of Year) to jump directly to the first day balance drops below zero.
+6. Use the **Negative Balance Warning** summary box (next to End of Year) to jump directly to the first day balance drops below zero.
 
 ### Graphs & Analysis
 - Click **📊 Graph** to see income vs expenses over time.

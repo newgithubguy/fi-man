@@ -136,11 +136,11 @@ Expected:
 
 ---
 
-## H. First Negative Summary Jump
+## H. Negative Balance Warning Summary Jump
 
 - [ ] Ensure the running balance becomes negative at least once.
-- [ ] Verify the **First Negative** card shows a date label.
-- [ ] Click the **First Negative** card.
+- [ ] Verify the **Negative Balance Warning** card shows a date label.
+- [ ] Click the **Negative Balance Warning** card.
 
 Expected:
 - Calendar jumps to the matching month/year and date selection.
