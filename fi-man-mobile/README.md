@@ -17,6 +17,22 @@ Simple browser-based finance tracker with:
 
 ## Run
 
+### Option 0: Docker Container (Mobile Project)
+
+From the `fi-man-mobile` folder:
+
+```bash
+docker compose up -d --build
+```
+
+Then open: `http://localhost:8081`
+
+Stop container:
+
+```bash
+docker compose down
+```
+
 ### Option 1: Local Development (Recommended for Development)
 Requires Node.js installed.
 

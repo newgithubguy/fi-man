@@ -1,0 +1,24 @@
+services:
+  finance-calendar-mobile:
+    build: .
+    container_name: finance-calendar-mobile
+    ports:
+      - "8081:3000"
+    volumes:
+      - finance-calendar-mobile-data:/data
+    environment:
+      - TZ=UTC
+      - NODE_ENV=production
+      - DB_PATH=/data/finance.db
+      - SESSION_SECRET=change-this-to-random-secret-in-production
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000/api/health', (r) => {if (r.statusCode !== 200) process.exit(1)})"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+volumes:
+  finance-calendar-mobile-data:
+    driver: local
