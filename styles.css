@@ -485,12 +485,13 @@ body {
 }
 
 .workspace-panels .resizable-window {
-  resize: both;
+  resize: vertical;
   overflow: auto;
   min-height: 220px;
   min-width: 300px;
   max-height: 80vh;
   max-width: 100%;
+  width: 100%;
   justify-self: start;
 }
 
@@ -550,15 +551,28 @@ body {
 .calendar-workspace.layout-bottom .calendar,
 .calendar-workspace.layout-bottom .workspace-panels {
   width: 100%;
-  justify-self: start;
+}
+
+.calendar-workspace.layout-bottom .calendar {
+  max-width: 1100px;
+  justify-self: center;
+}
+
+.calendar-workspace.layout-bottom .workspace-panels {
+  width: 100%;
+  max-width: 1100px;
+  grid-template-columns: 1fr;
+  justify-self: center;
 }
 
 .calendar-workspace.layout-bottom .workspace-panels > .card {
+  position: relative;
+  width: 100%;
   max-width: 100%;
 }
 
 .calendar-workspace.layout-bottom .calendar.card {
-  max-width: 1400px;
+  max-width: 1100px;
 }
 
 .today {

@@ -133,17 +133,10 @@
         </button>
       </div>
 
-      <div class="layout-controls" role="group" aria-label="Calendar panel layout">
-        <span class="layout-label">Panels</span>
-        <button id="panelLeftBtn" type="button" class="layout-btn" aria-pressed="false">Left of Calendar</button>
-        <button id="panelRightBtn" type="button" class="layout-btn" aria-pressed="true">Right of Calendar</button>
-        <button id="panelBottomBtn" type="button" class="layout-btn" aria-pressed="false">Bottom</button>
-      </div>
     </section>
 
     <section id="calendarWorkspace" class="calendar-workspace layout-right">
-      <section id="calendarWindow" class="calendar card resizable-window">
-        <div id="calendarDragHandle" class="panel-drag-handle" role="button" tabindex="0" aria-label="Drag calendar left, right, or bottom">↔ Drag calendar</div>
+      <section id="calendarWindow" class="calendar card">
         <div class="weekday-header">
           <span>Sun</span><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span>
         </div>
@@ -151,7 +144,6 @@
       </section>
 
       <div id="workspacePanels" class="workspace-panels">
-        <div id="panelDragHandle" class="panel-drag-handle" role="button" tabindex="0" aria-label="Drag panels left or right">↔ Drag panels left/right</div>
         <section id="addTransactionWindow" class="card form-card resizable-window">
           <h3>Add Transaction</h3>
           <form id="transactionForm" class="transaction-form">
