@@ -2,6 +2,24 @@
 
 This guide shows how to deploy the Finance Calendar app using Portainer.
 
+## One-Click Git Stack Options
+
+Use these Git build contexts directly in Portainer Stack editor.
+
+### Original App (this folder)
+
+- Repository URL: `https://github.com/newgithubguy/fi-man.git`
+- Compose path: `docker-compose.yml`
+- Port: `8080`
+
+### Mobile App (fi-man-mobile)
+
+- Repository URL: `https://github.com/newgithubguy/fi-man.git`
+- Stack file: `fi-man-mobile/portainer-stack.yml`
+- Port: `8081`
+
+Mobile-specific setup details are also documented in [fi-man-mobile/PORTAINER_SETUP.md](fi-man-mobile/PORTAINER_SETUP.md).
+
 ## Prerequisites
 
 - Docker installed on the host

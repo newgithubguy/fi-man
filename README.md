@@ -63,6 +63,8 @@ For post-deploy verification, use the [SMOKE_TEST.md](SMOKE_TEST.md) checklist.
 
 **Prefer a UI?** Use [Portainer](PORTAINER_SETUP.md) for easy container management without command line.
 
+Mobile-friendly version available in [fi-man-mobile](fi-man-mobile) with Portainer stack docs at [fi-man-mobile/PORTAINER_SETUP.md](fi-man-mobile/PORTAINER_SETUP.md).
+
 ### Option 3: Static HTML (Offline, Limited Features)
 Open `index.html` directly in your browser for a basic offline experience (no persistent storage).
 
