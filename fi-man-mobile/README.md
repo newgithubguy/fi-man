@@ -73,7 +73,7 @@ Requires Docker and Docker Compose.
 docker compose up -d
 ```
 
-Access at: `http://localhost:8080` or `http://YOUR_MACHINE_IP:8080`
+Access at: `http://localhost:8081` or `http://YOUR_MACHINE_IP:8081`
 
 For detailed Docker setup instructions, see [DOCKER_SETUP.md](DOCKER_SETUP.md).
 
