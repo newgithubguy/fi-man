@@ -1,0 +1,163 @@
+# Finance Calendar Mobile
+
+Mobile-friendly version of the Finance Calendar app, based on the original project.
+
+Simple browser-based finance tracker with:
+- **Multi-account support** - Create separate calendars for different accounts
+- **Linked transfers** - Transfer money between accounts (creates matching transactions)
+- Calendar view with daily totals and running balance
+- **Income vs Expenses graph** - Visualize financial trends over time
+- **Category breakdown** - Analyze spending by category with doughnut charts
+- **Recurring transactions** - Automatically expand weekly, bi-weekly, monthly, quarterly, and yearly transactions
+- **Recurring end date support** - Optionally stop recurring series on a selected date
+- **Transaction color tags** - Assign a color to each transaction and reuse those colors in category charts
+- CSV import/export with recurring transaction expansion
+- Built-in calculator positioned in the accounts sidebar
+- Data persistence with SQLite database (Docker) or browser storage
+
+## Run
+
+### Option 1: Local Development (Recommended for Development)
+Requires Node.js installed.
+
+```bash
+# Install dependencies
+npm install
+
+# Start the server
+npm start
+
+# Open in browser: http://localhost:3000
+```
+
+#### Local Run Checklist
+
+1. Install Node.js 18+ (Node.js 20 recommended).
+2. From the project root, run:
+
+```bash
+npm install
+npm start
+```
+
+3. Open `http://localhost:3000`.
+4. If this is first run, register a user account on the login page.
+
+#### Local Troubleshooting
+
+- If port 3000 is in use, stop the process using it and restart `npm start`.
+- If dependencies fail to install, delete `node_modules` and rerun `npm install`.
+- Verify the API is reachable at `http://localhost:3000/api/health`.
+
+### Option 2: Docker Container (Best for Production/Sharing)
+Requires Docker and Docker Compose.
+
+```bash
+# Quick start with Docker Compose
+docker compose up -d
+```
+
+Access at: `http://localhost:8080` or `http://YOUR_MACHINE_IP:8080`
+
+For detailed Docker setup instructions, see [DOCKER_SETUP.md](DOCKER_SETUP.md).
+
+For post-deploy verification, use the [SMOKE_TEST.md](SMOKE_TEST.md) checklist.
+
+**Prefer a UI?** Use [Portainer](PORTAINER_SETUP.md) for easy container management without command line.
+
+### Option 3: Static HTML (Offline, Limited Features)
+Open `index.html` directly in your browser for a basic offline experience (no persistent storage).
+
+## Use
+
+### Accounts
+- Click the **+** button in the left sidebar to create new accounts
+- Click an account name to switch between them
+- Each account has its own separate transaction history
+- Click the **✎ (edit)** button to rename any account
+- Click the **⭐ (star)** button on non-primary accounts to make them the primary account (moves them to the top)
+- Click the **×** button to delete accounts (only available for non-primary accounts)
+- The primary account (first account) is protected from deletion and cannot be switched with the "×" button
+
+### Settings
+- Click the **⚙ (gear)** icon in the accounts header to access app settings
+  - **Delete All Data**: Permanently deletes all accounts, transactions, and settings (requires typing "DELETE ALL" to confirm)
+
+### Transactions
+1. Add transactions using date, payee, description, notes, amount, color, recurrence, and optional recurrence end date.
+   - Positive amount = income
+   - Negative amount = expense
+   - Payee is optional (e.g., Walmart, Employer, Landlord)
+   - Notes is optional for additional memo or details
+   - Color is optional and defaults to blue; edit anytime in the transaction edit modal.
+   - Click a calendar day to prefill the transaction date quickly.
+   - Select recurrence frequency: one-time, daily, weekly, bi-weekly, monthly, quarterly, or yearly.
+   - For recurring entries, you can set **Recurrence End Date** to stop the series automatically.
+   - Recurring transactions automatically appear on future dates based on the selected frequency.
+   - Date, Description, and Amount show inline validation hints when required values are missing (Amount also blocks zero).
+
+2. **Transfers Between Accounts**:
+   - Check "Transfer to another account" when adding a transaction
+   - Select which account to transfer to
+   - A matching transaction with the opposite amount will automatically be created in the other account
+   - Both transactions are linked - editing one updates the other
+   - Deleting one transaction removes both linked transactions
+   - Transfer links are shown as a badge on the transaction
+
+3. Move between months with arrow buttons.
+4. Review daily and balance totals directly in the calendar.
+5. Click on a day to view all transactions for that specific date (including recurring instances).
+6. Use the **Negative Balance Warning** summary box (next to End of Year) to jump directly to the first day balance drops below zero.
+
+### Graphs & Analysis
+- Click **📊 Graph** to see income vs expenses over time.
+  - Green line shows income trends
+  - Red line shows expense trends
+  - Switch between time range (30, 60, 90, 180, or 365 days) or specific month view
+  - View summary statistics for the selected period
+  - Data automatically refreshes when returning from the calendar
+  - Use the **🔄 Refresh** button to manually reload data
+
+- Click **📂 Categories** to analyze spending and income by category.
+  - Doughnut charts showing percentage breakdown by category
+  - Category names are based on transaction descriptions
+   - Pie slices use transaction colors when available (falls back to default palette when not set)
+  - View totals and percentages for each category
+  - Filter by time range or specific month
+  - List view shows all categories with visual bars and percentages
+
+### Tools
+- **Built-in Calculator**: Located in the left sidebar below accounts. Use for quick calculations while managing transactions.
+  - Supports basic operations (+, −, ×, ÷)
+  - Collapsible for space management
+  - Automatically repositions when adding new accounts
+
+### Import & Export
+- Export transactions with **Export CSV**.
+   - Select a date range to export specific transactions
+   - CSV includes all recurring transaction instances within the selected date range
+   - Recurring transactions are automatically expanded to show each occurrence (up to 12 months)
+   - Export "All" transactions to get the complete dataset including all generated recurring instances
+- Choose import mode:
+   - **Merge Import** adds imported rows to existing data.
+   - **Replace Import** overwrites existing data with imported rows.
+- Import transactions with **Import CSV** (columns: date, payee, description, notes, amount, recurrence).
+   - Payee, Notes, and Recurrence columns are optional.
+   - Recurrence defaults to "one-time" if not provided.
+   - Duplicate rows are skipped automatically.
+   - An in-page preview dialog appears before applying import (valid, duplicate, invalid counts) with Confirm/Cancel.
+   - Import results/errors are shown as small in-page toast notifications.
+- Remove individual transactions or clear all data.
+   - When removing a recurring transaction instance, a dialog appears with four options:
+     - **Delete All Previous**: Removes the original transaction definition and all instances up to and including this date
+     - **Delete Only This Occurrence**: Removes just this single instance (past and future occurrences remain)
+     - **Delete All Future**: Removes the original transaction definition and all future instances (past occurrences are preserved)
+     - **Delete All Occurrences**: Completely removes the recurring transaction and all of its occurrences
+   - If you delete the original recurring transaction definition directly, all instances are removed
+   - Clear All uses an in-page confirmation dialog.
+
+## Data Storage
+
+**Docker/Server:** Data is persisted in SQLite database stored at `/data/finance.db` (mounted volume).
+
+**Browser (Offline):** Data is stored in browser's localStorage under the key `finance-calendar-transactions`.

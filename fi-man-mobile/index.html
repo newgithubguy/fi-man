@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Finance Calendar</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <aside class="accounts-sidebar">
+    <div class="accounts-header">
+      <h2>Accounts</h2>
+      <button id="addAccountBtn" type="button" class="add-account-btn" title="Add new account">+</button>
+      <button id="settingsBtn" type="button" class="settings-btn" title="Settings">⚙</button>
+    </div>
+    <ul id="accountsList" class="accounts-list"></ul>
+
+    <section class="sidebar-notepad" aria-label="Recent manual transactions">
+      <div class="notepad-header">
+        <h3>Recent Transactions</h3>
+        <span class="notepad-subtitle">Last 10 manual entries</span>
+      </div>
+      <ul id="recentTransactionsList" class="recent-transactions-list">
+        <li class="notepad-empty">No manual transactions yet.</li>
+      </ul>
+    </section>
+
+    <section class="sidebar-notepad" aria-label="Quick notes">
+      <div class="notepad-header">
+        <h3>Notes</h3>
+      </div>
+      <textarea id="quickNotesInput" class="quick-notes-input" maxlength="1200" placeholder="Write notes for this account..."></textarea>
+    </section>
+
+    <section class="calculator" aria-label="Calculator">
+      <div class="calculator-header">
+        <h3>Calculator</h3>
+        <button id="calculatorToggle" type="button" class="calculator-toggle" aria-expanded="true" aria-controls="calculatorBody">−</button>
+      </div>
+      <div id="calculatorBody" class="calculator-body">
+        <input id="calculatorDisplay" type="text" value="0" aria-label="Calculator display" readonly />
+        <div id="calculatorKeys" class="calculator-keys" role="group" aria-label="Calculator buttons">
+          <button type="button" data-action="clear">C</button>
+          <button type="button" data-action="backspace">⌫</button>
+          <button type="button" data-value="(">(</button>
+          <button type="button" data-value=")">)</button>
+
+          <button type="button" data-value="7">7</button>
+          <button type="button" data-value="8">8</button>
+          <button type="button" data-value="9">9</button>
+          <button type="button" data-value="/">÷</button>
+
+          <button type="button" data-value="4">4</button>
+          <button type="button" data-value="5">5</button>
+          <button type="button" data-value="6">6</button>
+          <button type="button" data-value="*">×</button>
+
+          <button type="button" data-value="1">1</button>
+          <button type="button" data-value="2">2</button>
+          <button type="button" data-value="3">3</button>
+          <button type="button" data-value="-">−</button>
+
+          <button type="button" data-value="0">0</button>
+          <button type="button" data-value=".">.</button>
+          <button type="button" data-action="equals">=</button>
+          <button type="button" data-value="+">+</button>
+        </div>
+      </div>
+    </section>
+  </aside>
+
+  <main class="app">
+    <header class="topbar">
+      <div>
+        <h1>Finance Calendar</h1>
+        <p class="subtitle">Track daily totals with a balance</p>
+      </div>
+      <div class="user-info">
+        <span id="usernameDisplay" class="username-display"></span>
+        <button id="logoutBtn" type="button" class="logout-btn">Logout</button>
+      </div>
+    </header>
+
+    <section class="controls card">
+      <div class="month-controls">
+        <button id="prevMonth" type="button" class="month-nav-btn" aria-label="Previous month">←</button>
+        <div class="month-selector-group">
+          <label for="yearSelect" class="selector-label">Year</label>
+          <select id="yearSelect"></select>
+        </div>
+        <div class="month-selector-group">
+          <label for="monthSelect" class="selector-label">Month</label>
+          <select id="monthSelect">
+            <option value="0">January</option>
+            <option value="1">February</option>
+            <option value="2">March</option>
+            <option value="3">April</option>
+            <option value="4">May</option>
+            <option value="5">June</option>
+            <option value="6">July</option>
+            <option value="7">August</option>
+            <option value="8">September</option>
+            <option value="9">October</option>
+            <option value="10">November</option>
+            <option value="11">December</option>
+          </select>
+        </div>
+        <button id="nextMonth" type="button" class="month-nav-btn" aria-label="Next month">→</button>
+        <a href="graph.html" class="graph-link">📊 Graph</a>
+        <a href="categories.html" class="graph-link">📂 Categories</a>
+      </div>
+
+      <div class="summary-row">
+        <div class="stat">
+          <span class="label">Starting Balance</span>
+          <strong id="startingBalanceDisplay">$0.00</strong>
+        </div>
+        <div class="stat">
+          <span class="label">Month Change</span>
+          <strong id="monthChangeDisplay">$0.00</strong>
+        </div>
+        <div class="stat">
+          <span class="label">End of Month</span>
+          <strong id="endBalanceDisplay">$0.00</strong>
+        </div>
+        <div class="stat">
+          <span class="label">End of Year</span>
+          <strong id="endOfYearBalanceDisplay">$0.00</strong>
+        </div>
+        <button id="firstNegativeBalanceBtn" type="button" class="stat stat-link is-disabled" aria-disabled="true">
+          <span class="label">Negative Balance Warning</span>
+          <strong id="firstNegativeBalanceDisplay">None</strong>
+        </button>
+      </div>
+
+    </section>
+
+    <section id="calendarWorkspace" class="calendar-workspace layout-bottom">
+      <section id="calendarWindow" class="calendar card">
+        <div class="weekday-header">
+          <span>Sun</span><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span>
+        </div>
+        <div id="calendarGrid" class="grid"></div>
+      </section>
+
+      <div id="workspacePanels" class="workspace-panels">
+        <section id="addTransactionWindow" class="card form-card resizable-window">
+          <h3>Add Transaction</h3>
+          <form id="transactionForm" class="transaction-form">
+            <label>
+              Date
+              <input id="dateInput" type="date" required />
+              <span id="dateHint" class="field-hint" aria-live="polite"></span>
+            </label>
+            <label>
+              Payee
+              <input id="payeeInput" type="text" maxlength="60" placeholder="Walmart, Employer, Landlord..." />
+              <span class="field-hint"></span>
+            </label>
+            <label>
+              Description
+              <input id="descriptionInput" type="text" maxlength="80" placeholder="Groceries, Salary, Rent..." required />
+              <span id="descriptionHint" class="field-hint" aria-live="polite"></span>
+            </label>
+            <label>
+              Amount
+              <input id="amountInput" type="number" step="0.01" placeholder="Use negative for expenses" required />
+              <span id="amountHint" class="field-hint" aria-live="polite"></span>
+            </label>
+            <label>
+              Color
+              <input id="colorInput" type="color" value="#3b82f6" aria-label="Transaction color" />
+              <span class="field-hint"></span>
+            </label>
+            <label>
+              Recurrence
+              <select id="recurrenceInput">
+                <option value="one-time" selected>One-time</option>
+                <option value="daily">Daily</option>
+                <option value="weekly">Weekly</option>
+                <option value="bi-weekly">Bi-weekly</option>
+                <option value="monthly">Monthly</option>
+                <option value="quarterly">Quarterly</option>
+                <option value="yearly">Yearly</option>
+              </select>
+              <span class="field-hint"></span>
+            </label>
+            <label id="recurrenceEndDateLabel" class="hidden">
+              Recurrence End Date
+              <input id="recurrenceEndDateInput" type="date" />
+              <span id="recurrenceEndDateHint" class="field-hint" aria-live="polite"></span>
+            </label>
+            <label class="notes-field">
+              Notes
+              <textarea id="notesInput" maxlength="200" placeholder="Optional notes or memo..."></textarea>
+              <span class="field-hint"></span>
+            </label>
+            <div class="transfer-section">
+              <label class="checkbox-label">
+                <input id="isTransferInput" type="checkbox" />
+                <span>Transfer to another account</span>
+              </label>
+              <label id="transferAccountLabel" class="hidden">
+                Transfer to Account
+                <select id="transferAccountInput">
+                </select>
+              </label>
+            </div>
+            <button type="submit">Add</button>
+          </form>
+        </section>
+
+        <section id="transactionsWindow" class="card resizable-window">
+          <div class="list-header">
+            <h3 id="transactionListTitle">Transactions</h3>
+            <div class="list-actions">
+              <button id="exportCsv" type="button">Export CSV</button>
+              <select id="importMode" aria-label="Import mode">
+                <option value="merge" selected>Merge Import</option>
+                <option value="replace">Replace Import</option>
+              </select>
+              <label for="importCsv" class="import-label">Import CSV</label>
+              <input id="importCsv" type="file" accept=".csv,text/csv" hidden />
+              <button id="clearAll" type="button" class="danger">Clear All</button>
+            </div>
+          </div>
+          <ul id="transactionList" class="transaction-list"></ul>
+        </section>
+      </div>
+    </section>
+  </main>
+
+  <div id="importPreviewModal" class="modal-backdrop" hidden aria-hidden="true">
+    <section class="modal-card" role="dialog" aria-modal="true" aria-labelledby="importPreviewTitle">
+      <h3 id="importPreviewTitle">Import Preview</h3>
+      <div class="modal-grid">
+        <div><span>CSV rows read</span><strong id="previewRowsRead">0</strong></div>
+        <div><span>Valid rows</span><strong id="previewValidRows">0</strong></div>
+        <div><span>Will import</span><strong id="previewWillImport">0</strong></div>
+        <div><span>Duplicates skipped</span><strong id="previewDuplicates">0</strong></div>
+        <div><span>Invalid skipped</span><strong id="previewInvalid">0</strong></div>
+      </div>
+      <div class="modal-actions">
+        <button id="previewCancel" type="button">Cancel</button>
+        <button id="previewConfirm" type="button">Confirm Import</button>
+      </div>
+    </section>
+  </div>
+
+  <div id="clearAllModal" class="modal-backdrop" hidden aria-hidden="true">
+    <section class="modal-card" role="dialog" aria-modal="true" aria-labelledby="clearAllTitle">
+      <h3 id="clearAllTitle">Clear Month Transactions</h3>
+      <p class="modal-text" id="clearAllMessage">This will permanently delete all transactions from this month.</p>
+      <div class="modal-actions">
+        <button id="clearAllCancel" type="button">Cancel</button>
+        <button id="clearAllConfirm" type="button" class="danger-action">Delete Month</button>
+      </div>
+    </section>
+  </div>
+
+  <div id="editTransactionModal" class="modal-backdrop" hidden aria-hidden="true">
+    <section class="modal-card" role="dialog" aria-modal="true" aria-labelledby="editTransactionTitle">
+      <h3 id="editTransactionTitle">Edit Transaction</h3>
+      <form id="editTransactionForm" class="transaction-form">
+        <label>
+          Date
+          <input id="editDateInput" type="date" required />
+          <span id="editDateHint" class="field-hint" aria-live="polite"></span>
+        </label>
+        <label>
+          Payee
+          <input id="editPayeeInput" type="text" maxlength="60" placeholder="Walmart, Employer, Landlord..." />
+        </label>
+        <label>
+          Description
+          <input id="editDescriptionInput" type="text" maxlength="80" placeholder="Groceries, Salary, Rent..." required />
+          <span id="editDescriptionHint" class="field-hint" aria-live="polite"></span>
+        </label>
+        <label>
+          Amount
+          <input id="editAmountInput" type="number" step="0.01" placeholder="Use negative for expenses" required />
+          <span id="editAmountHint" class="field-hint" aria-live="polite"></span>
+        </label>
+        <label>
+          Color
+          <input id="editColorInput" type="color" value="#3b82f6" aria-label="Transaction color" />
+          <span class="field-hint"></span>
+        </label>
+        <label>
+          Recurrence
+          <select id="editRecurrenceInput">
+            <option value="one-time" selected>One-time</option>
+            <option value="daily">Daily</option>
+            <option value="weekly">Weekly</option>
+            <option value="bi-weekly">Bi-weekly</option>
+            <option value="monthly">Monthly</option>
+            <option value="quarterly">Quarterly</option>
+            <option value="yearly">Yearly</option>
+          </select>
+        </label>
+        <label id="editRecurrenceEndDateLabel" class="hidden">
+          Recurrence End Date
+          <input id="editRecurrenceEndDateInput" type="date" />
+          <span id="editRecurrenceEndDateHint" class="field-hint" aria-live="polite"></span>
+        </label>
+        <label class="notes-field">
+          Notes
+          <textarea id="editNotesInput" maxlength="200" placeholder="Optional notes or memo..."></textarea>
+        </label>
+        <div class="transfer-section">
+          <label class="checkbox-label">
+            <input id="editIsTransferInput" type="checkbox" />
+            <span>Transfer to another account</span>
+          </label>
+          <label id="editTransferAccountLabel" class="hidden">
+            Transfer to Account
+            <select id="editTransferAccountInput">
+            </select>
+          </label>
+        </div>
+        <div class="modal-actions">
+          <button id="editCancel" type="button">Cancel</button>
+          <button type="submit">Save Changes</button>
+        </div>
+      </form>
+    </section>
+  </div>
+
+  <div id="exportDateRangeModal" class="modal-backdrop" hidden aria-hidden="true">
+    <section class="modal-card" role="dialog" aria-modal="true" aria-labelledby="exportDateRangeTitle">
+      <h3 id="exportDateRangeTitle">Export Transactions - Select Date Range</h3>
+      <form id="exportDateRangeForm" class="export-form">
+        <label>
+          From Date
+          <input id="exportFromDate" type="date" />
+          <span class="field-hint">Leave empty for earliest date</span>
+        </label>
+        <label>
+          To Date
+          <input id="exportToDate" type="date" />
+          <span class="field-hint">Leave empty for latest date</span>
+        </label>
+        <p class="export-info">
+          <strong id="exportTransactionCount">All</strong> transactions will be exported.
+        </p>
+        <div class="modal-actions">
+          <button id="exportCancel" type="button">Cancel</button>
+          <button type="submit">Export CSV</button>
+        </div>
+      </form>
+    </section>
+  </div>
+
+  <div id="deleteAllDataModal" class="modal-backdrop" hidden aria-hidden="true">
+    <section class="modal-card" role="dialog" aria-modal="true" aria-labelledby="deleteAllDataTitle">
+      <h3 id="deleteAllDataTitle">Delete All Data</h3>
+      <p style="color: #d32f2f; font-weight: bold;">⚠️ This action cannot be undone. All accounts and transactions will be permanently deleted.</p>
+      <p>To confirm, type "DELETE ALL" in the box below:</p>
+      <input id="deleteAllConfirmation" type="text" placeholder="Type DELETE ALL to confirm" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; margin: 12px 0;" />
+      <div class="modal-actions">
+        <button id="deleteAllCancel" type="button">Cancel</button>
+        <button id="deleteAllConfirm" type="button" style="background-color: #d32f2f; color: white;" disabled>Delete All Data</button>
+      </div>
+    </section>
+  </div>
+
+  <div id="deleteRecurringModal" class="modal-backdrop" hidden aria-hidden="true">
+    <section class="modal-card" role="dialog" aria-modal="true" aria-labelledby="deleteRecurringTitle">
+      <h3 id="deleteRecurringTitle">Delete Recurring Transaction</h3>
+      <p id="deleteRecurringMessage">What would you like to delete?</p>
+      <div class="modal-actions" style="flex-direction: column; gap: 8px;">
+        <button id="deletePreviousBtn" type="button" style="background-color: #ff9800; color: white;">Delete All Previous (including this)</button>
+        <button id="deleteThisOnlyBtn" type="button" style="background-color: #2196f3; color: white;">Delete Only This Occurrence</button>
+        <button id="deleteFutureBtn" type="button" style="background-color: #d32f2f; color: white;">Delete All Future (including this)</button>
+        <button id="deleteAllOccurrencesBtn" type="button" style="background-color: #9c27b0; color: white;">Delete All Occurrences</button>
+        <button id="deleteRecurringCancel" type="button">Cancel</button>
+      </div>
+    </section>
+  </div>
+
+  <div id="editRecurringModal" class="modal-backdrop" hidden aria-hidden="true">
+    <section class="modal-card" role="dialog" aria-modal="true" aria-labelledby="editRecurringTitle">
+      <h3 id="editRecurringTitle">Edit Recurring Transaction</h3>
+      <p>Do you want to apply these changes to all occurrences or just this one?</p>
+      <div class="modal-actions" style="flex-direction: column; gap: 8px;">
+        <button id="editAllOccurrencesBtn" type="button" style="background-color: #2196f3; color: white;">Apply to All Occurrences</button>
+        <button id="editThisOnlyBtn" type="button" style="background-color: #ff9800; color: white;">Apply to This Occurrence Only</button>
+        <button id="editRecurringCancel" type="button">Cancel</button>
+      </div>
+    </section>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
