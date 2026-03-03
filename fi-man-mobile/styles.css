@@ -1433,11 +1433,23 @@ body {
     grid-template-columns: 1fr;
   }
 
+  #transactionForm {
+    grid-template-columns: 1fr;
+    width: 100%;
+  }
+
   #transactionForm > label,
   #transactionForm .notes-field,
   #transactionForm .transfer-section,
   #transactionForm button[type="submit"] {
     grid-column: 1;
+  }
+
+  #transactionForm input,
+  #transactionForm select,
+  #transactionForm textarea,
+  #transactionForm button {
+    width: 100%;
   }
 
   .summary-row {
