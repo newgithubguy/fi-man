@@ -78,6 +78,23 @@ docker compose up -d
 
 Note: recent updates add new transaction fields (color, recurrence end date, excluded dates). Rebuilding/restarting ensures automatic SQLite schema migration runs at startup.
 
+### GitHub + Docker Update Checklist
+
+Use this quick sequence when syncing from GitHub:
+
+```bash
+cd /path/to/fi-man
+git fetch origin
+git pull origin master
+docker compose down
+docker compose build --no-cache
+docker compose up -d
+```
+
+Then hard refresh your browser to load updated frontend assets:
+- Windows/Linux: Ctrl + Shift + R or Ctrl + F5
+- Mac: Cmd + Shift + R
+
 ## Refresh Docker Image Explicitly
 
 If you want to force-refresh the local image before starting containers:

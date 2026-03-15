@@ -11,6 +11,9 @@ Simple browser-based finance tracker with:
 - **Transaction color tags** - Assign a color to each transaction and reuse those colors in category charts
 - CSV import/export with recurring transaction expansion
 - Built-in calculator positioned in the accounts sidebar
+- Keyboard calculator support (top-row numbers and numpad)
+- Highlighted-day sidebar window showing transactions for the selected date
+- Compact workspace layout with Add Transaction and Transactions side by side below the calendar
 - Data persistence with SQLite database (Docker) or browser storage
 
 ## Run
@@ -129,8 +132,17 @@ Open `index.html` directly in your browser for a basic offline experience (no pe
 ### Tools
 - **Built-in Calculator**: Located in the left sidebar below accounts. Use for quick calculations while managing transactions.
   - Supports basic operations (+, −, ×, ÷)
+   - Supports keyboard input (number row and numpad)
   - Collapsible for space management
   - Automatically repositions when adding new accounts
+
+- **Highlighted Day Sidebar Window**: Located in the left sidebar under Recent Transactions.
+   - Updates automatically when you click a date in the calendar
+   - Lists current transactions for the selected day, including recurring occurrences
+
+### Layout
+- The **Add Transaction** and **Transactions** windows are shown side by side below the calendar for a compact working area.
+- On smaller screens, these windows collapse into a single-column stacked layout.
 
 ### Import & Export
 - Export transactions with **Export CSV**.

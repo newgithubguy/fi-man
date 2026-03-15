@@ -40,3 +40,21 @@ docker compose down
 docker compose build --no-cache
 docker compose up -d
 ```
+
+### GitHub + Docker Update Checklist
+
+```bash
+cd /path/to/fi-man
+git fetch origin
+git pull origin master
+cd fi-man-mobile
+docker compose down
+docker compose build --no-cache
+docker compose up -d
+```
+
+Then hard refresh your browser:
+- Windows/Linux: Ctrl + Shift + R or Ctrl + F5
+- Mac: Cmd + Shift + R
+
+Recent UI updates include keyboard calculator input, highlighted-day sidebar transactions, and compact side-by-side workspace panels below the calendar.

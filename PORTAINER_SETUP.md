@@ -76,6 +76,17 @@ Access the app:
 
 Note: recent updates add new transaction fields (color, recurrence end date, excluded dates). Redeploy/rebuild ensures startup schema migration runs and these fields are persisted.
 
+### GitHub + Portainer Update Checklist
+
+When updating from repository changes:
+
+1. Confirm the stack points to `https://github.com/newgithubguy/fi-man.git` and `docker-compose.yml`.
+2. Click **Pull and redeploy** in Portainer.
+3. If UI changes are not visible, stop stack, update stack, and rebuild with no cache from CLI.
+4. Hard refresh the browser after redeploy.
+
+Recent UI updates include keyboard calculator input, highlighted-day sidebar transactions, and compact side-by-side workspace panels below the calendar.
+
 ### Force Image Refresh in Portainer
 
 If code changes are not reflected after redeploy:

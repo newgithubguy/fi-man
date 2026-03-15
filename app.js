@@ -96,6 +96,8 @@ const exportTransactionCount = document.getElementById("exportTransactionCount")
 const exportCancel = document.getElementById("exportCancel");
 const accountsList = document.getElementById("accountsList");
 const recentTransactionsList = document.getElementById("recentTransactionsList");
+const selectedDayTransactionsList = document.getElementById("selectedDayTransactionsList");
+const selectedDayTransactionsSubtitle = document.getElementById("selectedDayTransactionsSubtitle");
 const quickNotesInput = document.getElementById("quickNotesInput");
 const addAccountBtn = document.getElementById("addAccountBtn");
 const isTransferInput = document.getElementById("isTransferInput");
@@ -178,6 +180,68 @@ function renderRecentTransactionsNotepad() {
   });
 }
 
+function getTransactionsForDateKey(dateKey) {
+  if (!dateKey) {
+    return [];
+  }
+
+  const selectedDate = new Date(dateKey);
+  const expandStart = new Date(selectedDate);
+  expandStart.setFullYear(expandStart.getFullYear() - 1);
+  const expandEnd = new Date(selectedDate);
+  expandEnd.setFullYear(expandEnd.getFullYear() + 1);
+
+  return expandRecurringTransactions(expandStart, expandEnd).filter((item) => item.date === dateKey);
+}
+
+function renderSelectedDayTransactionsNotepad() {
+  if (!selectedDayTransactionsList || !selectedDayTransactionsSubtitle) {
+    return;
+  }
+
+  selectedDayTransactionsSubtitle.textContent = selectedDateKey || "No day selected";
+  selectedDayTransactionsList.innerHTML = "";
+
+  const dayItems = getTransactionsForDateKey(selectedDateKey);
+
+  if (!dayItems.length) {
+    const empty = document.createElement("li");
+    empty.className = "notepad-empty";
+    empty.textContent = selectedDateKey
+      ? `No transactions for ${selectedDateKey}.`
+      : "No transactions for the selected day.";
+    selectedDayTransactionsList.appendChild(empty);
+    return;
+  }
+
+  dayItems.forEach((item) => {
+    const entry = document.createElement("li");
+    entry.className = "selected-day-transaction";
+
+    const topRow = document.createElement("div");
+    topRow.className = "selected-day-transaction-top";
+
+    const description = document.createElement("span");
+    description.className = "selected-day-transaction-description";
+    description.textContent = item.description || "Transaction";
+
+    const amount = document.createElement("strong");
+    amount.className = item.amount >= 0 ? "positive" : "negative";
+    amount.textContent = formatCurrency(item.amount);
+
+    const meta = document.createElement("div");
+    meta.className = "selected-day-transaction-meta";
+    const payeeText = item.payee || "No payee";
+    const notesText = item.notes ? ` • ${item.notes}` : "";
+    const recurringText = item.isRecurring ? " • recurring" : "";
+    meta.textContent = `${payeeText}${recurringText}${notesText}`;
+
+    topRow.append(description, amount);
+    entry.append(topRow, meta);
+    selectedDayTransactionsList.appendChild(entry);
+  });
+}
+
 function renderQuickNotesNotepad() {
   if (!quickNotesInput) return;
   const accountKey = activeAccountId || "default";
@@ -186,6 +250,7 @@ function renderQuickNotesNotepad() {
 
 function renderSidebarNotepads() {
   renderRecentTransactionsNotepad();
+  renderSelectedDayTransactionsNotepad();
   renderQuickNotesNotepad();
 }
 
@@ -620,6 +685,26 @@ if (calculatorToggle && calculatorBody) {
 if (calculatorKeys && calculatorDisplay) {
   let calculatorExpression = calculatorDisplay.value || "0";
 
+  const isEditableElement = (element) => {
+    if (!(element instanceof HTMLElement)) {
+      return false;
+    }
+
+    if (element.isContentEditable) {
+      return true;
+    }
+
+    if (element instanceof HTMLTextAreaElement || element instanceof HTMLSelectElement) {
+      return true;
+    }
+
+    if (element instanceof HTMLInputElement) {
+      return !element.readOnly && element.type !== "button" && element.type !== "submit";
+    }
+
+    return false;
+  };
+
   const updateCalculatorDisplay = (value) => {
     calculatorDisplay.value = value;
   };
@@ -700,6 +785,54 @@ if (calculatorKeys && calculatorDisplay) {
 
     if (value) {
       appendValue(value);
+    }
+  });
+
+  document.addEventListener("keydown", (event) => {
+    if (calculatorBody?.classList.contains("hidden") || event.ctrlKey || event.metaKey || event.altKey) {
+      return;
+    }
+
+    if (isEditableElement(event.target) || isEditableElement(document.activeElement)) {
+      return;
+    }
+
+    const { key, code } = event;
+    const value = /^Digit[0-9]$|^Numpad[0-9]$/.test(code) ? code.slice(-1) : /^[0-9]$/.test(key) ? key : null;
+
+    if (value !== null) {
+      event.preventDefault();
+      appendValue(value);
+      return;
+    }
+
+    if (key === "." || code === "NumpadDecimal") {
+      event.preventDefault();
+      appendValue(".");
+      return;
+    }
+
+    if (["+", "-", "*", "/", "(", ")"].includes(key)) {
+      event.preventDefault();
+      appendValue(key);
+      return;
+    }
+
+    if (key === "Enter" || key === "=" || code === "NumpadEnter") {
+      event.preventDefault();
+      handleEquals();
+      return;
+    }
+
+    if (key === "Backspace") {
+      event.preventDefault();
+      backspace();
+      return;
+    }
+
+    if (key === "Delete") {
+      event.preventDefault();
+      clearExpression();
     }
   });
 }
@@ -2064,19 +2197,7 @@ function renderTransactions() {
     transactionListTitle.textContent = "Transactions";
   }
 
-  let dayItems = [];
-  
-  if (selectedDateKey) {
-    // Get expanded transactions for a range around the selected date
-    const selectedDate = new Date(selectedDateKey);
-    const expandStart = new Date(selectedDate);
-    expandStart.setFullYear(expandStart.getFullYear() - 1);
-    const expandEnd = new Date(selectedDate);
-    expandEnd.setFullYear(expandEnd.getFullYear() + 1);
-    
-    const allTransactions = expandRecurringTransactions(expandStart, expandEnd);
-    dayItems = allTransactions.filter((item) => item.date === selectedDateKey);
-  }
+  const dayItems = getTransactionsForDateKey(selectedDateKey);
 
   if (!dayItems.length) {
     const empty = document.createElement("li");
@@ -2166,6 +2287,7 @@ function renderTransactions() {
 function render() {
   renderCalendar();
   renderTransactions();
+  renderSelectedDayTransactionsNotepad();
   renderAccounts();
 }
 

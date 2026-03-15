@@ -57,6 +57,15 @@ volumes:
 2. Click **Pull and redeploy** (if using Git) or **Update the stack**
 3. If updates still do not appear, rebuild image with no cache from CLI
 
+### GitHub + Portainer Update Checklist
+
+1. Confirm the stack uses repo `https://github.com/newgithubguy/fi-man.git` and file `fi-man-mobile/portainer-stack.yml`.
+2. Click **Pull and redeploy**.
+3. If updates are still stale, stop and update stack, then rebuild from CLI with `--no-cache`.
+4. Hard refresh the browser.
+
+Recent UI updates include keyboard calculator input, highlighted-day sidebar transactions, and compact side-by-side workspace panels below the calendar.
+
 ## Security Note
 
 Change `SESSION_SECRET` in the stack to a long random value before production use.
