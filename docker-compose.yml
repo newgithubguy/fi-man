@@ -1,7 +1,12 @@
 services:
   finance-calendar:
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        APP_VERSION: "1.1.0"
     container_name: finance-calendar
+    image: fi-man:1.1.0
     ports:
       - "8080:3000"
     volumes:
@@ -11,6 +16,10 @@ services:
       - NODE_ENV=production
       - DB_PATH=/data/finance.db
       - SESSION_SECRET=change-this-to-random-secret-in-production
+      - APP_VERSION=1.1.0
+    labels:
+      - app.name=fi-man
+      - app.version=1.1.0
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3000/api/health"]

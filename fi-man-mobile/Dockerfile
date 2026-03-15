@@ -1,5 +1,10 @@
 FROM node:20-bookworm-slim
 
+ARG APP_VERSION=1.1.0
+LABEL org.opencontainers.image.title="fi-man-mobile" \
+  org.opencontainers.image.version="${APP_VERSION}" \
+  org.opencontainers.image.source="https://github.com/newgithubguy/fi-man"
+
 WORKDIR /app
 
 # Copy package files
@@ -21,6 +26,7 @@ EXPOSE 3000
 ENV NODE_ENV=production
 ENV PORT=3000
 ENV DB_PATH=/data/finance.db
+ENV APP_VERSION=${APP_VERSION}
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
