@@ -1,6 +1,6 @@
 FROM node:20-bookworm-slim
 
-ARG APP_VERSION=1.1.0
+ARG APP_VERSION=1.1.1
 LABEL org.opencontainers.image.title="fi-man-mobile" \
   org.opencontainers.image.version="${APP_VERSION}" \
   org.opencontainers.image.source="https://github.com/newgithubguy/fi-man"
