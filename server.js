@@ -141,7 +141,63 @@ function initializeDatabase() {
         FOREIGN KEY (account_id) REFERENCES accounts(id)
       )
     `);
+
+    // Run compatibility migrations for older single-user database files.
+    db.run('SELECT 1', () => {
+      migrateLegacySchema().catch((err) => {
+        console.error('Error running schema migration:', err);
+      });
+    });
   });
+}
+
+async function migrateLegacySchema() {
+  const accountsColumns = await dbAll('PRAGMA table_info(accounts)');
+  const accountColumnNames = new Set(accountsColumns.map((col) => col.name));
+
+  if (!accountColumnNames.has('user_id')) {
+    await dbRun('ALTER TABLE accounts ADD COLUMN user_id TEXT');
+    console.log('Migration: added accounts.user_id');
+  }
+
+  const transactionsColumns = await dbAll('PRAGMA table_info(transactions)');
+  const transactionColumnNames = new Set(transactionsColumns.map((col) => col.name));
+
+  if (!transactionColumnNames.has('linked_transaction_id')) {
+    await dbRun('ALTER TABLE transactions ADD COLUMN linked_transaction_id TEXT');
+    console.log('Migration: added transactions.linked_transaction_id');
+  }
+
+  if (!transactionColumnNames.has('linked_account_id')) {
+    await dbRun('ALTER TABLE transactions ADD COLUMN linked_account_id TEXT');
+    console.log('Migration: added transactions.linked_account_id');
+  }
+
+  const entryHistoryColumns = await dbAll('PRAGMA table_info(entry_histories)');
+  const entryHistoryColumnNames = new Set(entryHistoryColumns.map((col) => col.name));
+
+  if (!entryHistoryColumnNames.has('account_id')) {
+    await dbRun('ALTER TABLE entry_histories ADD COLUMN account_id TEXT');
+    console.log('Migration: added entry_histories.account_id');
+  }
+
+  const activeAccountColumns = await dbAll('PRAGMA table_info(active_account)');
+  const activeAccountColumnNames = new Set(activeAccountColumns.map((col) => col.name));
+  const hasExpectedActiveAccountShape =
+    activeAccountColumnNames.has('user_id') && activeAccountColumnNames.has('account_id');
+
+  if (!hasExpectedActiveAccountShape) {
+    await dbRun('DROP TABLE IF EXISTS active_account');
+    await dbRun(`
+      CREATE TABLE IF NOT EXISTS active_account (
+        user_id TEXT PRIMARY KEY,
+        account_id TEXT,
+        FOREIGN KEY (user_id) REFERENCES users(id),
+        FOREIGN KEY (account_id) REFERENCES accounts(id)
+      )
+    `);
+    console.log('Migration: recreated active_account with multi-user columns');
+  }
 }
 
 // Helper function to run database queries with promises

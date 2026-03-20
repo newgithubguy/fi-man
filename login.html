@@ -4,27 +4,47 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Login - Finance Calendar</title>
+  <link rel="icon" type="image/png" href="build/icon.png" />
+  <link rel="shortcut icon" href="build/icon.ico" />
   <link rel="stylesheet" href="styles.css" />
   <style>
+    body {
+      background: #add8e6;
+      color: #1f2937;
+      justify-content: center;
+      align-items: flex-start;
+      padding: 24px 12px;
+    }
+
     .login-container {
       max-width: 400px;
-      margin: 100px auto;
+      width: 100%;
+      margin: 56px auto 0;
       padding: 2rem;
-      background: white;
-      border-radius: 8px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      background: #F8F5F0;
+      border: 1px solid #e0e5ef;
+      border-radius: 12px;
+      box-shadow: 0 10px 24px rgba(31, 41, 55, 0.14);
     }
     .login-header {
       text-align: center;
       margin-bottom: 2rem;
     }
+    .login-logo {
+      width: 72px;
+      height: 72px;
+      margin: 0 auto 0.75rem;
+      display: block;
+      border-radius: 16px;
+      box-shadow: 0 6px 16px rgba(37, 99, 235, 0.25);
+    }
     .login-header h1 {
       margin: 0 0 0.5rem 0;
-      color: #333;
+      color: #1f2937;
     }
     .login-header p {
       margin: 0;
-      color: #666;
+      color: #6b7280;
       font-size: 0.9rem;
     }
     .login-form {
@@ -39,21 +59,24 @@
     }
     .form-group label {
       font-weight: 500;
-      color: #333;
+      color: #1f2937;
     }
     .form-group input {
       padding: 0.75rem;
-      border: 1px solid #ddd;
+      border: 1px solid #e0e5ef;
       border-radius: 4px;
       font-size: 1rem;
+      background: #fff;
+      color: #1f2937;
     }
     .form-group input:focus {
       outline: none;
-      border-color: #4CAF50;
+      border-color: #2563eb;
+      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2);
     }
     .btn-primary {
       padding: 0.75rem;
-      background: #4CAF50;
+      background: #2563eb;
       color: white;
       border: none;
       border-radius: 4px;
@@ -63,7 +86,7 @@
       transition: background 0.2s;
     }
     .btn-primary:hover {
-      background: #45a049;
+      background: #1d4ed8;
     }
     .btn-primary:disabled {
       background: #ccc;
@@ -72,10 +95,10 @@
     .form-toggle {
       text-align: center;
       margin-top: 1rem;
-      color: #666;
+      color: #6b7280;
     }
     .form-toggle a {
-      color: #4CAF50;
+      color: #2563eb;
       cursor: pointer;
       text-decoration: none;
     }
@@ -90,16 +113,36 @@
       font-size: 0.9rem;
       margin-bottom: 1rem;
     }
+    .is-hidden {
+      display: none;
+    }
+
+    @media (max-width: 600px) {
+      .login-container {
+        margin: 12px auto 0;
+        padding: 1.25rem;
+      }
+
+      .login-logo {
+        width: 64px;
+        height: 64px;
+      }
+
+      .btn-primary {
+        min-height: 44px;
+      }
+    }
   </style>
 </head>
 <body>
   <div class="login-container">
     <div class="login-header">
-      <h1>Finance Calendar</h1>
+      <img src="build/icon.png" alt="Fi-Cal logo" class="login-logo" />
+      <h1>Fi-Cal</h1>
       <p id="formTitle">Login to your account</p>
     </div>
     
-    <div id="errorMessage" class="error-message" style="display: none;"></div>
+    <div id="errorMessage" class="error-message is-hidden"></div>
     
     <form id="authForm" class="login-form">
       <div class="form-group">
@@ -220,11 +263,11 @@
     
     function showError(message) {
       errorMessage.textContent = message;
-      errorMessage.style.display = 'block';
+      errorMessage.classList.remove('is-hidden');
     }
     
     function hideError() {
-      errorMessage.style.display = 'none';
+      errorMessage.classList.add('is-hidden');
     }
   </script>
 </body>

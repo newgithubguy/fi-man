@@ -4,27 +4,50 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Login - Finance Calendar</title>
+  <link rel="icon" type="image/png" href="build/icon.png" />
+  <link rel="shortcut icon" href="build/icon.ico" />
   <link rel="stylesheet" href="styles.css" />
   <style>
+    body {
+      background:
+        radial-gradient(circle at top right, rgba(255, 255, 255, 0.16), transparent 30%),
+        radial-gradient(circle at bottom left, rgba(255, 255, 255, 0.1), transparent 28%),
+        linear-gradient(145deg, #123f50, #3d876b);
+      color: #183038;
+      justify-content: center;
+      align-items: flex-start;
+      padding: 24px 12px;
+    }
+
     .login-container {
       max-width: 400px;
-      margin: 100px auto;
+      width: 100%;
+      margin: 56px auto 0;
       padding: 2rem;
-      background: white;
-      border-radius: 8px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      background: #f8f4e8;
+      border: 1px solid #d9c7a4;
+      border-radius: 12px;
+      box-shadow: 0 18px 34px rgba(11, 29, 37, 0.22);
     }
     .login-header {
       text-align: center;
       margin-bottom: 2rem;
     }
+    .login-logo {
+      width: 72px;
+      height: 72px;
+      margin: 0 auto 0.75rem;
+      display: block;
+      border-radius: 16px;
+      box-shadow: 0 10px 22px rgba(222, 169, 74, 0.28);
+    }
     .login-header h1 {
       margin: 0 0 0.5rem 0;
-      color: #333;
+      color: #183038;
     }
     .login-header p {
       margin: 0;
-      color: #666;
+      color: #5a6f67;
       font-size: 0.9rem;
     }
     .login-form {
@@ -39,22 +62,25 @@
     }
     .form-group label {
       font-weight: 500;
-      color: #333;
+      color: #183038;
     }
     .form-group input {
       padding: 0.75rem;
-      border: 1px solid #ddd;
+      border: 1px solid #d9c7a4;
       border-radius: 4px;
       font-size: 1rem;
+      background: #fff;
+      color: #183038;
     }
     .form-group input:focus {
       outline: none;
-      border-color: #4CAF50;
+      border-color: #dea94a;
+      box-shadow: 0 0 0 3px rgba(222, 169, 74, 0.22);
     }
     .btn-primary {
       padding: 0.75rem;
-      background: #4CAF50;
-      color: white;
+      background: #dea94a;
+      color: #183038;
       border: none;
       border-radius: 4px;
       font-size: 1rem;
@@ -63,7 +89,7 @@
       transition: background 0.2s;
     }
     .btn-primary:hover {
-      background: #45a049;
+      background: #c79031;
     }
     .btn-primary:disabled {
       background: #ccc;
@@ -72,10 +98,10 @@
     .form-toggle {
       text-align: center;
       margin-top: 1rem;
-      color: #666;
+      color: #5a6f67;
     }
     .form-toggle a {
-      color: #4CAF50;
+      color: #123f50;
       cursor: pointer;
       text-decoration: none;
     }
@@ -90,11 +116,19 @@
       font-size: 0.9rem;
       margin-bottom: 1rem;
     }
+    .is-hidden {
+      display: none;
+    }
 
     @media (max-width: 600px) {
       .login-container {
-        margin: 24px 12px;
+        margin: 12px auto 0;
         padding: 1.25rem;
+      }
+
+      .login-logo {
+        width: 64px;
+        height: 64px;
       }
 
       .btn-primary {
@@ -106,11 +140,12 @@
 <body>
   <div class="login-container">
     <div class="login-header">
-      <h1>Finance Calendar</h1>
+      <img src="build/icon.png" alt="Fi-Cal logo" class="login-logo" />
+      <h1>Fi-Cal</h1>
       <p id="formTitle">Login to your account</p>
     </div>
     
-    <div id="errorMessage" class="error-message" style="display: none;"></div>
+    <div id="errorMessage" class="error-message is-hidden"></div>
     
     <form id="authForm" class="login-form">
       <div class="form-group">
@@ -231,11 +266,11 @@
     
     function showError(message) {
       errorMessage.textContent = message;
-      errorMessage.style.display = 'block';
+      errorMessage.classList.remove('is-hidden');
     }
     
     function hideError() {
-      errorMessage.style.display = 'none';
+      errorMessage.classList.add('is-hidden');
     }
   </script>
 </body>

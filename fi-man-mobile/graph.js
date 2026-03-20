@@ -20,9 +20,11 @@ let viewMode = "timeRange";
 
 async function loadAccountsFromAPI() {
   try {
-    const response = await fetch(`${API_BASE_URL}/accounts`);
+    const response = await fetch(`${API_BASE_URL}/accounts`, {
+      credentials: 'include'
+    });
     if (!response.ok) {
-      throw new Error('Failed to load accounts');
+      throw new Error(`Failed to load accounts (${response.status})`);
     }
     return await response.json();
   } catch (error) {
@@ -33,9 +35,11 @@ async function loadAccountsFromAPI() {
 
 async function loadActiveAccountIdFromAPI() {
   try {
-    const response = await fetch(`${API_BASE_URL}/active-account`);
+    const response = await fetch(`${API_BASE_URL}/active-account`, {
+      credentials: 'include'
+    });
     if (!response.ok) {
-      throw new Error('Failed to load active account');
+      throw new Error(`Failed to load active account (${response.status})`);
     }
     const data = await response.json();
     return data.activeAccountId;
@@ -292,34 +296,45 @@ function updateChart() {
   }
   
   const chartType = chartTypeSelect?.value || 'line';
+  const chartCanvas = document.getElementById('incomeExpensesChart');
+  const ctx = chartCanvas?.getContext('2d');
+  if (!ctx) {
+    console.error('Graph canvas is unavailable.');
+    return;
+  }
 
-  // Create new chart
-  const ctx = document.getElementById('incomeExpensesChart').getContext('2d');
+  const css = getComputedStyle(document.documentElement);
+  const accent = css.getPropertyValue('--accent').trim() || '#dea94a';
+  const accentStrong = css.getPropertyValue('--accent-strong').trim() || '#c79031';
+  const good = css.getPropertyValue('--good').trim() || '#3d876b';
+  const bad = css.getPropertyValue('--bad').trim() || '#a63e36';
+  const text = css.getPropertyValue('--text').trim() || '#183038';
+  const border = css.getPropertyValue('--border').trim() || '#d9c7a4';
   const isPie = chartType === 'pie';
   const datasets = isPie
     ? [{
         data: [chartData.totalIncome, chartData.totalExpenses],
-        backgroundColor: ['#10b981', '#ef4444'],
-        borderColor: ['#0f9f74', '#dc2626'],
+        backgroundColor: [good, bad],
+        borderColor: [accentStrong, bad],
         borderWidth: 1,
       }]
     : [
         {
           label: 'Income',
           data: chartData.incomeData,
-          borderColor: '#10b981',
-          backgroundColor: chartType === 'line' ? 'rgba(16, 185, 129, 0.1)' : 'rgba(16, 185, 129, 0.6)',
+          borderColor: good,
+          backgroundColor: chartType === 'line' ? 'rgba(61, 135, 107, 0.18)' : 'rgba(61, 135, 107, 0.72)',
           borderWidth: 2,
-          tension: 0.4,
+          tension: 0.35,
           fill: chartType === 'line',
         },
         {
           label: 'Expenses',
           data: chartData.expensesData,
-          borderColor: '#ef4444',
-          backgroundColor: chartType === 'line' ? 'rgba(239, 68, 68, 0.1)' : 'rgba(239, 68, 68, 0.6)',
+          borderColor: bad,
+          backgroundColor: chartType === 'line' ? 'rgba(166, 62, 54, 0.16)' : 'rgba(166, 62, 54, 0.7)',
           borderWidth: 2,
-          tension: 0.4,
+          tension: 0.35,
           fill: chartType === 'line',
         }
       ];
@@ -332,7 +347,7 @@ function updateChart() {
     },
     options: {
       responsive: true,
-      maintainAspectRatio: true,
+      maintainAspectRatio: false,
       onClick: (event, _elements, chartInstance) => {
         if (isPie) {
           return;
@@ -361,6 +376,9 @@ function updateChart() {
         legend: {
           display: true,
           position: 'top',
+          labels: {
+            color: text,
+          }
         },
         tooltip: {
           callbacks: {
@@ -375,14 +393,22 @@ function updateChart() {
       scales: isPie ? undefined : {
         y: {
           beginAtZero: true,
+          grid: {
+            color: border,
+          },
           ticks: {
+            color: text,
             callback: function(value) {
               return '$' + value.toFixed(0);
             }
           }
         },
         x: {
+          grid: {
+            color: 'rgba(217, 199, 164, 0.45)',
+          },
           ticks: {
+            color: text,
             maxTicksLimit: 12,
             autoSkip: true,
           }
@@ -401,11 +427,11 @@ viewModeRadios.forEach(radio => {
     viewMode = e.target.value;
     
     if (viewMode === 'timeRange') {
-      timeRangeControls.style.display = 'block';
-      monthSelectorControls.style.display = 'none';
+      timeRangeControls.classList.remove('hidden');
+      monthSelectorControls.classList.add('hidden');
     } else {
-      timeRangeControls.style.display = 'none';
-      monthSelectorControls.style.display = 'block';
+      timeRangeControls.classList.add('hidden');
+      monthSelectorControls.classList.remove('hidden');
     }
     
     updateChart();
