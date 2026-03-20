@@ -17,5 +17,5 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
-# Desktop build artifacts
-fi-cal/release/
+# Desktop build artifacts — fi-cal is a separate project, not tracked here
+fi-cal/
