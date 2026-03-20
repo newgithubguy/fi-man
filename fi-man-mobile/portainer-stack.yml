@@ -5,6 +5,7 @@ services:
       dockerfile: Dockerfile
       args:
         APP_VERSION: "1.1.1"
+        CACHE_BUST: "20260319-1"
     container_name: finance-calendar-mobile
     image: fi-man-mobile:1.1.1
     ports:
